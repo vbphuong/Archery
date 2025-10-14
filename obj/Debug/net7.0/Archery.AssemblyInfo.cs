@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Archery")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+d254b9e2ee1c9311920610b92a30912b6432706c")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+77aa39763f990517a47177271a344a147dcb497c")]
 [assembly: System.Reflection.AssemblyProductAttribute("Archery")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Archery")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

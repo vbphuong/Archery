@@ -24,7 +24,7 @@
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h5 class="card-title">Archer's Ranges</h5>
-                <button id="btnAddRange" class="btn btn-primary btn-sm" style="display:none;">
+                <button id="btnAddRange" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addRangeModal" style="display:none;">
                     <i class="bi bi-plus-circle"></i> Add Range
                 </button>
             </div>
@@ -76,6 +76,74 @@
     </div>
 </div>
 
+<!-- ===================== 🟢 MODALS ===================== -->
+<!-- Add Range Modal -->
+<div class="modal fade" id="addRangeModal" tabindex="-1" aria-labelledby="addRangeLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addRangeLabel">Add New Range</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addRangeForm">
+                    <div class="mb-3">
+                        <label class="form-label">Distance</label>
+                        <input type="number" class="form-control" id="addDistance" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Target Face</label>
+                        <input type="text" class="form-control" id="addTargetFace" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Num Ends</label>
+                        <input type="number" class="form-control" id="addNumEnds" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="saveAddRangeBtn">Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Range Modal -->
+<div class="modal fade" id="editRangeModal" tabindex="-1" aria-labelledby="editRangeLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editRangeLabel">Edit Range</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editRangeForm">
+                    <input type="hidden" id="editRangeId">
+                    <div class="mb-3">
+                        <label class="form-label">Distance</label>
+                        <input type="number" class="form-control" id="editDistance" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Target Face</label>
+                        <input type="text" class="form-control" id="editTargetFace" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Num Ends</label>
+                        <input type="number" class="form-control" id="editNumEnds" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="saveEditRangeBtn">Save changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ===================================================== -->
+
 @section Scripts {
     <script>
 const competitionId = '@competitionId';
@@ -83,39 +151,29 @@ const roundId = '@roundId';
 const archerId = '@archerId';
 
 $(document).ready(async function () {
-    // ===== JWT TOKEN FUNCTIONS =====
+    // ===== JWT HELPERS =====
     function getToken() { return localStorage.getItem('jwtToken'); }
-
     function getDecodedToken() {
         const token = getToken();
         if (!token) return null;
-        try {
-            return JSON.parse(atob(token.split('.')[1]));
-        } catch {
-            return null;
-        }
+        try { return JSON.parse(atob(token.split('.')[1])); } catch { return null; }
     }
-
     function getCurrentRole() {
         const decoded = getDecodedToken();
         if (!decoded) return null;
         return decoded['http://schemas.microsoft.com/ws/2008/06/identity/claims/role']
             || decoded['role'] || decoded['roles'] || null;
     }
-
     function getAuthHeaders() {
         const token = getToken();
         return token ? { 'Authorization': 'Bearer ' + token } : {};
     }
 
     const currentRole = getCurrentRole();
-    const isAdmin = currentRole === 'Admin';
-    const isRecorder = currentRole === 'Recorder';
-    const editable = isAdmin || isRecorder;
-
+    const editable = ['Admin', 'Recorder'].includes(currentRole);
     if (editable) $("#btnAddRange").show();
 
-    // ===== MAIN HANDLERS =====
+    // ===== BUTTON EVENTS =====
     $('.view-ends-btn').on('click', async function () {
         const rangeId = $(this).data('rangeid');
         const $row = $(`#ends-row-${rangeId}`);
@@ -130,11 +188,9 @@ $(document).ready(async function () {
     });
 
     if (editable) {
-        // Thêm nút Edit / Delete cho từng dòng range
         $('#rangeTable tbody tr[data-rangeid]').each(function () {
             const id = $(this).data('rangeid');
             const $cell = $(this).find('.action-cell');
-
             $cell.append(`
                 <button class="btn btn-sm btn-warning edit-range-btn" data-rangeid="${id}">
                     <i class="bi bi-pencil-square"></i> Edit
@@ -145,77 +201,99 @@ $(document).ready(async function () {
             `);
         });
 
-        // Gắn event
-        $('#btnAddRange').on('click', () => openAddModal());
-        $(document).on('click', '.edit-range-btn', function () {
+        $(document).on('click', '.edit-range-btn', async function () {
             const id = $(this).data('rangeid');
-            openEditModal(id);
+            const res = await fetch(`/api/archeryrangeapi/${id}`, { headers: getAuthHeaders() });
+            if (!res.ok) return alert('Failed to load range info.');
+            const range = await res.json();
+            $('#editRangeId').val(range.rangeID);
+            $('#editDistance').val(range.distance);
+            $('#editTargetFace').val(range.targetFace);
+            $('#editNumEnds').val(range.numEnds);
+            const modal = new bootstrap.Modal(document.getElementById('editRangeModal'));
+            modal.show();
         });
+
         $(document).on('click', '.delete-range-btn', async function () {
             const id = $(this).data('rangeid');
-            if (confirm('Are you sure to delete this range?')) {
-                await deleteRange(id);
-                await updateTotalScoreFromServer(); // Cập nhật tổng điểm
-            }
+            if (!confirm('Are you sure to delete this range?')) return;
+            const res = await fetch(`/api/archeryrangeapi/${id}`, {
+                method: 'DELETE',
+                headers: getAuthHeaders()
+            });
+            if (res.ok) {
+                $(`tr[data-rangeid="${id}"]`).next().remove();
+                $(`tr[data-rangeid="${id}"]`).remove();
+                await updateTotalScoreFromServer();
+            } else alert('Failed to delete range.');
         });
     }
 
-    // ===== LOAD ENDS + ARROWS =====
+    // ===== ADD RANGE =====
+    $('#saveAddRangeBtn').on('click', async function () {
+        const body = {
+            competitionId,
+            roundId,
+            archerId,
+            distance: parseInt($('#addDistance').val()),
+            targetFace: $('#addTargetFace').val(),
+            numEnds: parseInt($('#addNumEnds').val())
+        };
+        const res = await fetch('/api/archeryrangeapi', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+            body: JSON.stringify(body)
+        });
+        if (res.ok) {
+            alert('✅ Range added!');
+            location.reload();
+        } else alert('❌ Failed to add range.');
+    });
+
+    // ===== EDIT RANGE =====
+    $('#saveEditRangeBtn').on('click', async function () {
+        const id = $('#editRangeId').val();
+        const body = {
+            rangeID: id,
+            distance: parseInt($('#editDistance').val()),
+            targetFace: $('#editTargetFace').val(),
+            numEnds: parseInt($('#editNumEnds').val())
+        };
+        const res = await fetch(`/api/archeryrangeapi/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+            body: JSON.stringify(body)
+        });
+        if (res.ok) {
+            alert('✅ Range updated!');
+            location.reload();
+        } else alert('❌ Failed to update range.');
+    });
+
+    // ===== LOAD ENDS =====
     async function loadEnds(rangeId, $container) {
         try {
             const res = await fetch(`/api/endapi/getbyrange/${rangeId}`, { headers: getAuthHeaders() });
             if (!res.ok) throw new Error('Failed to load ends');
             const ends = await res.json();
+            if (!ends.length) return $container.html('<em>No ends found for this range.</em>');
 
-            if (!ends || !ends.length) {
-                $container.html('<em>No ends found for this range.</em>');
-                return;
-            }
-
-            let html = `
-                <table class="table table-sm table-hover mb-0">
-                    <thead>
-                        <tr><th>End #</th><th>Arrows</th></tr>
-                    </thead>
-                    <tbody>
-            `;
-
+            let html = `<table class="table table-sm table-hover mb-0"><thead><tr><th>End #</th><th>Arrows</th></tr></thead><tbody>`;
             for (const end of ends) {
                 const arrows = await loadArrows(end.endID);
-
                 let arrowInputs = arrows.map(a => {
                     const val = a.value ?? '';
-                    if (editable) {
-                        return `
-                            <input type="number" min="0" max="10" class="form-control form-control-sm arrow-input"
-                                data-arrowid="${a.arrowID}" value="${val}"
-                                style="width:60px; display:inline-block; margin-right:4px;">
-                        `;
-                    } else {
-                        return `<span style="margin-right:6px;">${val || '-'}</span>`;
-                    }
+                    return editable
+                        ? `<input type="number" min="0" max="10" class="form-control form-control-sm arrow-input" data-arrowid="${a.arrowID}" value="${val}" style="width:60px; display:inline-block; margin-right:4px;">`
+                        : `<span style="margin-right:6px;">${val || '-'}</span>`;
                 }).join('');
 
-                if (editable) {
-                    arrowInputs += `
-                        <button class="btn btn-sm btn-success save-arrows-btn" data-endid="${end.endID}">
-                            💾 Save
-                        </button>`;
-                }
-
-                html += `
-                    <tr>
-                        <td>${end.endNumber || ''}</td>
-                        <td>${arrowInputs || '-'}</td>
-                    </tr>
-                `;
+                if (editable) arrowInputs += `<button class="btn btn-sm btn-success save-arrows-btn" data-endid="${end.endID}">💾 Save</button>`;
+                html += `<tr><td>${end.endNumber || ''}</td><td>${arrowInputs || '-'}</td></tr>`;
             }
-
             html += '</tbody></table>';
             $container.html(html);
-
             if (editable) attachSaveHandlers($container);
-
         } catch (err) {
             console.error(err);
             $container.html('<span class="text-danger">Error loading ends.</span>');
@@ -227,54 +305,30 @@ $(document).ready(async function () {
             const res = await fetch(`/api/arrowapi/getbyend/${endId}`, { headers: getAuthHeaders() });
             if (!res.ok) throw new Error('Failed to load arrows');
             return await res.json();
-        } catch {
-            return [];
-        }
+        } catch { return []; }
     }
 
     function attachSaveHandlers($container) {
         $container.find('.save-arrows-btn').on('click', async function () {
             const $row = $(this).closest('tr');
             const inputs = $row.find('.arrow-input');
-
             for (const input of inputs) {
                 const arrowId = $(input).data('arrowid');
                 const value = parseInt($(input).val()) || 0;
-
                 await fetch(`/api/arrowapi/${arrowId}`, {
                     method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        ...getAuthHeaders()
-                    },
-                    body: JSON.stringify({ value: value })
+                    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+                    body: JSON.stringify({ value })
                 });
             }
-
-            alert('✅ Arrows updated successfully!');
-            await updateTotalScoreFromServer(); // cập nhật lại tổng điểm
+            alert('✅ Arrows updated!');
+            await updateTotalScoreFromServer();
         });
     }
 
-    async function deleteRange(id) {
-        const res = await fetch(`/api/archeryrangeapi/${id}`, {
-            method: 'DELETE',
-            headers: getAuthHeaders()
-        });
-        if (res.ok) {
-            $(`tr[data-rangeid="${id}"]`).next().remove();
-            $(`tr[data-rangeid="${id}"]`).remove();
-        } else {
-            alert('Failed to delete range.');
-        }
-    }
-
-    // ===== LẤY TỔNG ĐIỂM TỪ SERVER =====
     async function updateTotalScoreFromServer() {
         try {
-            const res = await fetch(`/api/scoreapi/gettotal/${competitionId}/${roundId}/${archerId}`, {
-                headers: getAuthHeaders()
-            });
+            const res = await fetch(`/api/scoreapi/gettotal/${competitionId}/${roundId}/${archerId}`, { headers: getAuthHeaders() });
             if (!res.ok) throw new Error('Failed to load total score');
             const data = await res.json();
             $('#totalScore').text(data.totalScore ?? 0);
@@ -284,11 +338,6 @@ $(document).ready(async function () {
         }
     }
 
-    // Placeholder cho modal thêm/sửa range
-    function openAddModal() { alert('TODO: Open Add Range Modal'); }
-    function openEditModal(id) { alert('TODO: Open Edit Range Modal for ' + id); }
-
-    // 🔹 Lần đầu load trang -> cập nhật tổng điểm
     await updateTotalScoreFromServer();
 });
     </script>

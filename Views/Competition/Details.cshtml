@@ -42,152 +42,186 @@
         <div id="archerArea" class="row g-2"></div>
     </div>
 
-    <!-- MODALS -->
-    @await Html.PartialAsync("_RoundModals")
+    <!-- ✅ Modal Add Round -->
+    <div class="modal fade" id="roundModal" tabindex="-1" aria-labelledby="roundModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form id="addForm">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="roundModalLabel">Add Round to Competition</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p id="roundInfoText" class="text-muted">Select a round to see its details.</p>
+                        <div class="mb-3">
+                            <label for="roundSelect" class="form-label">Select Round</label>
+                            <select class="form-select" id="roundSelect" required></select>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="hasEquivalent">
+                            <label class="form-check-label" for="hasEquivalent">Has Equivalent</label>
+                        </div>
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="isPractice">
+                            <label class="form-check-label" for="isPractice">Is Practice</label>
+                        </div>
+                        <div class="mb-3">
+                            <label for="statusSelect" class="form-label">Status</label>
+                            <select id="statusSelect" class="form-select">
+                                <option>NotStarted</option>
+                                <option>Ongoing</option>
+                                <option>Completed</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-success">Add Round</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- ✅ Modal Edit Round -->
+    <div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form id="editForm">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="editModalLabel">Edit Round</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" id="editRoundId" />
+                        <div class="mb-3">
+                            <label for="editRoundName" class="form-label">Round Name</label>
+                            <input type="text" id="editRoundName" class="form-control" readonly />
+                        </div>
+                        <div class="form-check mb-2">
+                            <input type="checkbox" class="form-check-input" id="editHasEquivalent">
+                            <label for="editHasEquivalent" class="form-check-label">Has Equivalent</label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input type="checkbox" class="form-check-input" id="editIsPractice">
+                            <label for="editIsPractice" class="form-check-label">Is Practice</label>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editStatus" class="form-label">Status</label>
+                            <select id="editStatus" class="form-select">
+                                <option>NotStarted</option>
+                                <option>Ongoing</option>
+                                <option>Completed</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 </div>
 
 @section Scripts {
     <script>
 $(function () {
     const compId = @compId;
-    function getToken() { return localStorage.getItem('jwtToken'); }
-
-    // Decode JWT for Role
-    function decodeToken() {
+    const getToken = () => localStorage.getItem('jwtToken');
+    const decodeToken = () => {
         const t = getToken(); if (!t) return null;
         try { return JSON.parse(atob(t.split('.')[1])); } catch { return null; }
-    }
+    };
+
     const role = (() => {
         const d = decodeToken();
         return d ? (d["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"] || d["role"]) : null;
     })();
     const canEdit = role === 'Admin' || role === 'Recorder';
 
-    if (canEdit) {
-        $('#actionsArea').html('<button class="btn btn-success" id="openAddBtn" data-bs-toggle="modal" data-bs-target="#addModal">➕ Add Round</button>');
-    }
+    if (canEdit)
+        $('#actionsArea').html('<button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#roundModal">➕ Add Round</button>');
 
-    // ============================
-    // LOAD ROUNDS
-    // ============================
+    // ================= LOAD ROUNDS =================
     async function loadRounds() {
-        try {
-            const res = await fetch(`/api/CompetitionRoundAPI/GetByCompetition/${compId}`, {
-                headers: { 'Authorization': 'Bearer ' + getToken() }
-            });
-            if (!res.ok) throw new Error('Failed to load rounds');
-            const list = await res.json();
-            renderRoundTable(list);
-        } catch (e) {
-            console.error(e);
-            alert('Unable to load rounds.');
-        }
+        const res = await fetch(`/api/CompetitionRoundAPI/GetByCompetition/${compId}`, {
+            headers: { 'Authorization': 'Bearer ' + getToken() }
+        });
+        if (!res.ok) return alert('Failed to load rounds.');
+        const list = await res.json();
+        renderRoundTable(list);
     }
 
     async function loadArchersForRound(roundId) {
         const res = await fetch(`/api/CompetitionRoundAPI/GetArchersForRound/${compId}/${roundId}/Archers`, {
             headers: { 'Authorization': 'Bearer ' + getToken() }
         });
-
-        if (!res.ok) return $(`#archers-${roundId}`).html('<span class="text-danger">Failed to load archers.</span>');
-        const list = await res.json();
-
-        if (!list.length) return $(`#archers-${roundId}`).html('<span class="text-muted">No archers assigned yet.</span>');
-
+        const list = res.ok ? await res.json() : [];
+        const $area = $(`#archers-${roundId}`);
+        if (!list.length) return $area.html('<em>No archers yet.</em>');
         let html = '<div class="d-flex flex-wrap gap-2">';
-        for (const a of list) {
-            html += `
-            <div class="card p-2 shadow-sm" style="min-width:180px;">
-                <strong>${a.fullName}</strong><br/>
-                <small>${a.gender} — ${a.equipments.join(', ')}</small><br/>
-                <button class="btn btn-sm btn-outline-primary mt-1"
-                        onclick="window.location.href='/CompetitionRound/Details?competitionId=${compId}&roundId=${roundId}&archerId=${a.archerID}'">
-                    Details
-                </button>
-            </div>
-        `;
-        }
+        for (const a of list)
+            html += `<div class="card p-2 shadow-sm" style="min-width:180px;">
+                        <strong>${a.fullName}</strong><br/>
+                        <small>${a.gender} — ${a.equipments.join(', ')}</small><br/>
+                        <button class="btn btn-sm btn-outline-primary mt-1"
+                            onclick="window.location.href='/CompetitionRound/Details?competitionId=${compId}&roundId=${roundId}&archerId=${a.archerID}'">
+                            Details
+                        </button>
+                    </div>`;
         html += '</div>';
-        $(`#archers-${roundId}`).html(html);
+        $area.html(html);
     }
 
     async function renderRoundTable(list) {
-        const $tbody = $('#roundTable tbody');
-        $tbody.empty();
-
-        if (!list?.length) {
-            $tbody.append('<tr><td colspan="9" class="text-center">No rounds added.</td></tr>');
-            return;
-        }
+        const $tbody = $('#roundTable tbody').empty();
+        if (!list?.length) return $tbody.html('<tr><td colspan="9" class="text-center">No rounds added.</td></tr>');
 
         for (const r of list) {
-            const editBtn = canEdit ? `
-            <button class="btn btn-sm btn-warning edit-btn"
-                    data-roundid="${r.roundID}"
-                    data-roundname="${r.roundName}"
-                    data-hasequivalent="${r.hasEquivalent}"
-                    data-ispractice="${r.isPractice}"
-                    data-status="${r.status}">Edit</button>` : '';
+            const editBtn = canEdit ? `<button class="btn btn-sm btn-warning edit-btn"
+                data-roundid="${r.roundID}" data-roundname="${r.roundName}"
+                data-hasequivalent="${r.hasEquivalent}" data-ispractice="${r.isPractice}"
+                data-status="${r.status}">Edit</button>` : '';
 
-            const removeBtn = canEdit ? `
-            <button class="btn btn-sm btn-danger remove-btn" data-roundid="${r.roundID}">Remove</button>` : '';
-
-            const detailsBtn = `
-            <button class="btn btn-sm btn-info details-btn" 
-                    onclick="window.location.href='/Score/Details?competitionId=${r.competitionID}&roundId=${r.roundID}'">
-                Details
-            </button>`;
+            const removeBtn = canEdit ? `<button class="btn btn-sm btn-danger remove-btn" data-roundid="${r.roundID}">Remove</button>` : '';
+            const detailsBtn = `<button class="btn btn-sm btn-info" onclick="window.location.href='/Score/Details?competitionId=${r.competitionID}&roundId=${r.roundID}'">Details</button>`;
 
             $tbody.append(`
-            <tr data-roundid="${r.roundID}" data-haseq="${r.hasEquivalent}" data-gender="${r.gender}" data-equipmentid="${r.equipmentID}" 
-                class="round-row droppable border border-1 border-secondary-subtle">
-                <td><strong>${r.roundName}</strong></td>
-                <td>${r.class || ''}</td>
-                <td>${r.gender || ''}</td>
-                <td>${r.equipmentName || ''}</td>
-                <td>${r.hasEquivalent || 'No'}</td>
-                <td>${r.isPractice || 'No'}</td>
-                <td>${r.status || ''}</td>
-                <td>${r.dateCreated ? new Date(r.dateCreated).toLocaleString() : '—'}</td>
-                <td>${editBtn} ${removeBtn} ${detailsBtn}</td>
-            </tr>
-            <tr id="archers-row-${r.roundID}">
-                <td colspan="9">
-                    <div class="archers-list" id="archers-${r.roundID}">
-                        <em>Loading archers...</em>
-                    </div>
-                </td>
-            </tr>
-        `);
-
+                <tr data-roundid="${r.roundID}" data-haseq="${r.hasEquivalent}" data-gender="${r.gender}"
+                    class="round-row droppable border border-1 border-secondary-subtle">
+                    <td><strong>${r.roundName}</strong></td>
+                    <td>${r.class || ''}</td>
+                    <td>${r.gender || ''}</td>
+                    <td>${r.equipmentName || ''}</td>
+                    <td>${r.hasEquivalent || 'No'}</td>
+                    <td>${r.isPractice || 'No'}</td>
+                    <td>${r.status || ''}</td>
+                    <td>${r.dateCreated ? new Date(r.dateCreated).toLocaleString() : '—'}</td>
+                    <td>${editBtn} ${removeBtn} ${detailsBtn}</td>
+                </tr>
+                <tr><td colspan="9"><div id="archers-${r.roundID}" class="p-2"><em>Loading...</em></div></td></tr>`);
             await loadArchersForRound(r.roundID);
         }
-
         enableDropZones();
     }
 
-    // ============================
-    // ADD / EDIT / DELETE ROUND
-    // ============================
+    // ================= ADD ROUND =================
     async function loadRoundOptions() {
         const res = await fetch('/api/RoundAPI/GetAllRoundNames', {
             headers: { 'Authorization': 'Bearer ' + getToken() }
         });
         const rounds = await res.json();
-        const $sel = $('#roundSelect');
-        $sel.empty().append('<option value="">-- Select Round --</option>');
-        rounds.forEach(r => {
-            $sel.append(`<option value="${r.roundID}">${r.name} — ${r.class} — ${r.gender} (${r.equipmentName})</option>`);
-        });
+        const $sel = $('#roundSelect').empty().append('<option value="">-- Select Round --</option>');
+        rounds.forEach(r => $sel.append(`<option value="${r.roundID}">${r.name} — ${r.class} — ${r.gender} (${r.equipmentName})</option>`));
     }
 
-    $('#addForm').on('submit', async function (ev) {
+    $('#addForm').on('submit', async ev => {
         ev.preventDefault();
-        const roundId = $('#roundSelect').val();
-        if (!roundId) return;
         const payload = {
             competitionID: compId,
-            roundID: parseInt(roundId),
+            roundID: parseInt($('#roundSelect').val()),
             hasEquivalent: $('#hasEquivalent').is(':checked') ? 'Yes' : 'No',
             isPractice: $('#isPractice').is(':checked') ? 'Yes' : 'No',
             status: $('#statusSelect').val()
@@ -197,19 +231,13 @@ $(function () {
             headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
             body: JSON.stringify(payload)
         });
-        if (res.ok) { $('#addModal').modal('hide'); loadRounds(); }
+        if (res.ok) {
+            bootstrap.Modal.getInstance(document.getElementById('roundModal')).hide();
+            loadRounds();
+        } else alert('❌ Failed to add round.');
     });
 
-    $('#roundTable').on('click', '.remove-btn', async function () {
-        if (!confirm('Remove this round?')) return;
-        const id = $(this).data('roundid');
-        await fetch(`/api/CompetitionRoundAPI/Delete/${compId}/${id}`, {
-            method: 'DELETE',
-            headers: { 'Authorization': 'Bearer ' + getToken() }
-        });
-        loadRounds();
-    });
-
+    // ================= EDIT ROUND =================
     $('#roundTable').on('click', '.edit-btn', function () {
         const r = $(this).data();
         $('#editRoundId').val(r.roundid);
@@ -220,25 +248,35 @@ $(function () {
         $('#editModal').modal('show');
     });
 
-    $('#editForm').on('submit', async function (e) {
+    $('#editForm').on('submit', async e => {
         e.preventDefault();
-        const roundId = $('#editRoundId').val();
+        const id = $('#editRoundId').val();
         const payload = {
             hasEquivalent: $('#editHasEquivalent').is(':checked') ? 'Yes' : 'No',
             isPractice: $('#editIsPractice').is(':checked') ? 'Yes' : 'No',
             status: $('#editStatus').val()
         };
-        const res = await fetch(`/api/CompetitionRoundAPI/Update/${compId}/${roundId}`, {
+        const res = await fetch(`/api/CompetitionRoundAPI/Update/${compId}/${id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
             body: JSON.stringify(payload)
         });
-        if (res.ok) { $('#editModal').modal('hide'); loadRounds(); }
+        if (res.ok) {
+            bootstrap.Modal.getInstance(document.getElementById('editModal')).hide();
+            loadRounds();
+        }
     });
 
-    // ============================
-    // LOAD ARCHERS
-    // ============================
+    $('#roundTable').on('click', '.remove-btn', async function () {
+        if (!confirm('Remove this round?')) return;
+        await fetch(`/api/CompetitionRoundAPI/Delete/${compId}/${$(this).data('roundid')}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': 'Bearer ' + getToken() }
+        });
+        loadRounds();
+    });
+
+    // ================= ARCHERS + DRAG & DROP =================
     async function loadArchers() {
         const res = await fetch('/api/ArcherAPI/GetAll', {
             headers: { 'Authorization': 'Bearer ' + getToken() }
@@ -249,153 +287,63 @@ $(function () {
     }
 
     function renderArchers(list) {
-        const $a = $('#archerArea');
-        $a.empty();
+        const $a = $('#archerArea').empty();
         if (!list.length) return $a.html('<p>No eligible archers.</p>');
         list.forEach(a => {
             const eq = a.equipmentNames.join(', ');
-            $a.append(`
-                <div class="col-md-3">
+            $a.append(`<div class="col-md-3">
                     <div class="card p-2 shadow-sm draggable" draggable="true"
-                        data-archerid="${a.archerId}"
-                        data-gender="${a.gender}"
+                        data-archerid="${a.archerId}" data-gender="${a.gender}"
                         data-equipmentnames='${JSON.stringify(a.equipmentNames)}'>
                         <h6>${a.fullName || a.firstName + ' ' + a.lastName}</h6>
                         <small class="text-muted">${a.gender} — ${eq}</small>
-                    </div>
-                </div>
-            `);
+                    </div></div>`);
         });
         enableDrag();
     }
 
-    
-    // ============================
-    // DRAG & DROP HANDLERS
-    // ============================
     function enableDrag() {
         $('.draggable').on('dragstart', function (ev) {
-            // dùng attr thay vì data để chắc chắn đọc đúng giá trị
             const archerId = Number($(this).attr('data-archerid'));
             const gender = $(this).attr('data-gender');
             const equipmentNames = JSON.parse($(this).attr('data-equipmentnames') || '[]');
-
             const payload = { archerId, gender, equipmentNames };
             ev.originalEvent.dataTransfer.setData('application/json', JSON.stringify(payload));
         });
     }
 
     function enableDropZones() {
-        $('.droppable').on('dragover', function (ev) {
+        $('.droppable').on('dragover', ev => ev.preventDefault())
+        .on('drop', async function (ev) {
             ev.preventDefault();
-            $(this).addClass('bg-light');
-        });
-
-        $('.droppable').on('dragleave', function () {
-            $(this).removeClass('bg-light');
-        });
-
-        $('.droppable').on('drop', async function (ev) {
-            ev.preventDefault();
-            $(this).removeClass('bg-light');
-
-            let dataRaw;
-            try {
-                dataRaw = ev.originalEvent.dataTransfer.getData('application/json');
-                if (!dataRaw) dataRaw = ev.originalEvent.dataTransfer.getData('text'); // fallback
-            } catch (ex) {
-                console.error('Failed to read drag data', ex);
-                return alert('Failed to read dragged data.');
-            }
-
-            let data;
-            try {
-                data = JSON.parse(dataRaw);
-            } catch (ex) {
-                console.error('Invalid drag payload:', dataRaw, ex);
-                return alert('Invalid drag payload.');
-            }
-
-            const archerId = data.archerId;
-            const archerGender = data.gender;
-            let eqNames = data.equipmentNames ?? [];
-
-            // normalize eqNames to array of strings
-            if (!Array.isArray(eqNames)) {
-                if (typeof eqNames === 'string') {
-                    eqNames = eqNames.split(',').map(s => s.trim()).filter(Boolean);
-                } else {
-                    eqNames = [];
-                }
-            }
-
             const roundId = $(this).data('roundid');
-            const hasEq = $(this).data('haseq'); // "Yes" or "No"
+            const hasEq = $(this).data('haseq');
             const roundGender = $(this).data('gender');
-            // try to get round equipment name text for comparison
             const roundEquip = $(this).find('td:nth-child(4)').text().trim();
 
-            const isEligible = (hasEq === 'Yes')
-                ? eqNames.some(n => n === roundEquip)
-                : (archerGender === roundGender && eqNames.some(n => n === roundEquip));
+            let data = JSON.parse(ev.originalEvent.dataTransfer.getData('application/json'));
+            let eqNames = Array.isArray(data.equipmentNames) ? data.equipmentNames : [];
 
-            if (!isEligible) {
-                return alert('Archer not eligible for this round.');
-            }
+            const eligible = (hasEq === 'Yes')
+                ? eqNames.includes(roundEquip)
+                : (data.gender === roundGender && eqNames.includes(roundEquip));
 
-            const payload = {
-                ArcherID: Number(archerId),
-                RoundID: Number(roundId),
-                CompetitionID: Number(compId)
-            };
+            if (!eligible) return alert('❌ Archer not eligible for this round.');
 
-            console.log('Assign payload', payload);
-
-            try {
-                const res = await fetch('/api/CompetitionRoundAPI/AssignArcherToRound', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': 'Bearer ' + getToken()
-                    },
-                    body: JSON.stringify(payload)
-                });
-
-                // try parse body as json/text to show exact error
-                let bodyText = '';
-                try {
-                    const ct = res.headers.get('content-type') || '';
-                    if (ct.includes('application/json')) {
-                        const j = await res.json();
-                        bodyText = JSON.stringify(j, null, 2);
-                    } else {
-                        bodyText = await res.text();
-                    }
-                } catch (ex) {
-                    bodyText = '(failed to parse response body)';
-                }
-
-                if (res.ok) {
-                    console.log('Assign success', bodyText);
-                    alert('✅ Archer assigned successfully!');
-                    // optionally refresh rounds/archers UI
-                    await loadRounds();
-                    await loadArchers();
-                } else {
-                    console.error('Assign failed', res.status, bodyText);
-                    alert(`❌ Failed to assign archer.\nStatus: ${res.status}\n${bodyText}`);
-                }
-            } catch (err) {
-                console.error('Network error', err);
-                alert('Network error while assigning archer.');
-            }
+            const payload = { ArcherID: data.archerId, RoundID: roundId, CompetitionID: compId };
+            const res = await fetch('/api/CompetitionRoundAPI/AssignArcherToRound', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
+                body: JSON.stringify(payload)
+            });
+            if (res.ok) {
+                alert('✅ Archer assigned!');
+                loadRounds(); loadArchers();
+            } else alert('❌ Failed to assign archer.');
         });
     }
 
-
-    // ============================
-    // INIT
-    // ============================
+    // ================= INIT =================
     loadRoundOptions();
     loadRounds();
     loadArchers();

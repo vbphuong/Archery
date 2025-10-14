@@ -44,7 +44,7 @@ namespace Archery.Controllers
         }
 
         // STATE
-        [HttpGet("by-country/{countryId}")]
+        [HttpGet("{countryId}")]
         public async Task<IActionResult> GetStatesByCountry(int countryId)
             => Ok(await _repo.GetStatesByCountryAsync(countryId));
 
@@ -63,7 +63,7 @@ namespace Archery.Controllers
         }
 
         //CITY
-        [HttpGet("by-state/{stateId}")]
+        [HttpGet("{stateId}")]
         public async Task<IActionResult> GetCitiesByState(int stateId)
             => Ok(await _repo.GetCitiesByStateAsync(stateId));
 
