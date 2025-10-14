@@ -1,0 +1,109 @@
+﻿/* Gradient background for navbar */
+.bg-gradient-custom {
+    background: linear-gradient(90deg, #1a3c34, #2a6f5c, #4ba88c);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Navbar brand styling */
+.navbar-brand {
+    font-size: 1.8rem;
+    font-weight: bold;
+    color: #fff !important;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: transform 0.3s ease, color 0.3s ease;
+}
+
+    .navbar-brand:hover {
+        transform: scale(1.1);
+        color: #f0e68c !important;
+    }
+
+/* Nav link styling */
+.nav-link {
+    font-size: 1.1rem;
+    color: #fff !important;
+    margin: 0 10px;
+    position: relative;
+    transition: color 0.3s ease;
+}
+
+    .nav-link:hover {
+        color: #f0e68c !important;
+    }
+
+    /* Underline animation on hover */
+    .nav-link::after {
+        content: '';
+        position: absolute;
+        width: 0;
+        height: 2px;
+        bottom: -2px;
+        left: 0;
+        background-color: #f0e68c;
+        transition: width 0.3s ease;
+    }
+
+    .nav-link:hover::after {
+        width: 100%;
+    }
+
+    /* Icon styling */
+    .nav-link i {
+        margin-right: 5px;
+    }
+
+/* Inbox icon animation */
+.inbox-icon {
+    position: relative;
+    transition: transform 0.3s ease;
+}
+
+    .inbox-icon:hover {
+        transform: scale(1.2) rotate(10deg);
+        color: #ff6b6b !important;
+    }
+
+    .inbox-icon .badge {
+        position: absolute;
+        top: -5px;
+        right: -10px;
+        font-size: 0.7rem;
+        padding: 2px 5px;
+    }
+
+#logoutBtn {
+    background: linear-gradient(45deg, #ff4d4d, #e63939);
+    border: none;
+    border-radius: 20px;
+    padding: 8px 20px;
+    color: #fff;
+    font-weight: bold;
+    cursor: pointer;
+    transition: transform 0.3s ease, background 0.3s ease;
+}
+
+#logoutBtn:hover {
+    background: linear-gradient(45deg, #e63939, #ff1a1a);
+    transform: scale(1.05);
+}
+
+#logoutBtn:active {
+    transform: scale(0.95);
+}
+
+/* Responsive adjustments */
+@media (max-width: 576px) {
+    .navbar-nav {
+        text-align: center;
+    }
+
+    .nav-link {
+        margin: 5px 0;
+    }
+
+    .inbox-icon .badge {
+        top: 0;
+        right: 0;
+    }
+}

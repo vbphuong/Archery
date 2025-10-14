@@ -1,0 +1,27 @@
+﻿@model IEnumerable<Archery.Models.Entity.Equipment>
+
+@{
+    ViewData["Title"] = "Equipment List";
+}
+
+<div class="container mt-4">
+    <h2>Equipment List</h2>
+
+    <table class="table table-bordered table-striped">
+        <thead class="table-dark">
+            <tr>
+                <th>ID</th>
+                <th>Type</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model)
+            {
+                <tr>
+                    <td>@item.EquipmentID</td>
+                    <td>@item.Type</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

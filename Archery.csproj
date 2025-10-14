@@ -1,0 +1,67 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net7.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" '$(RunConfiguration)' == 'https' " />
+  <PropertyGroup Condition=" '$(RunConfiguration)' == 'http' " />
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="7.0.8" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="7.0.8" />
+    <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="7.0.0" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="7.3.0" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="7.7.0" />
+    <PackageReference Include="System.Security.Cryptography.Primitives" Version="4.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Cryptography.KeyDerivation" Version="7.0.8" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Common" Version="7.0.8" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Remove="Repository\" />
+    <None Remove="Data\" />
+    <None Remove="Services\" />
+    <None Remove="Handlers\" />
+    <None Remove="Models\Entity\" />
+    <None Remove="Models\DTO\" />
+    <None Remove="Models\API\" />
+    <None Remove="Views\Account\" />
+    <None Remove="Views\People\" />
+    <None Remove="Hubs\" />
+    <None Remove="Views\Inbox\" />
+    <None Remove="Views\Equipment\" />
+    <None Remove="Views\Round\" />
+    <None Remove="Views\Location\" />
+    <None Remove="Views\Archer\" />
+    <None Remove="Views\Competition\" />
+    <None Remove="Models\Factory\" />
+    <None Remove="Models\Factory\ScoreFactoryProducer.xs" />
+    <None Remove="Views\CompetitionRound\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Repository\" />
+    <Folder Include="Data\" />
+    <Folder Include="Services\" />
+    <Folder Include="Handlers\" />
+    <Folder Include="Models\Entity\" />
+    <Folder Include="Models\DTO\" />
+    <Folder Include="Models\API\" />
+    <Folder Include="Views\Account\" />
+    <Folder Include="wwwroot\img\" />
+    <Folder Include="Views\People\" />
+    <Folder Include="Hubs\" />
+    <Folder Include="Views\Inbox\" />
+    <Folder Include="Views\Equipment\" />
+    <Folder Include="Views\Round\" />
+    <Folder Include="Views\Location\" />
+    <Folder Include="Views\Archer\" />
+    <Folder Include="Views\Competition\" />
+    <Folder Include="Views\Round\" />
+    <Folder Include="Models\Factory\" />
+    <Folder Include="Views\CompetitionRound\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Remove="wwwroot\img\" />
+  </ItemGroup>
+</Project>

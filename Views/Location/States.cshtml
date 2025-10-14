@@ -1,0 +1,93 @@
+﻿@{
+    ViewData["Title"] = "States";
+    var countryId = ViewBag.CountryId;
+    var countryName = ViewBag.CountryName;
+}
+
+<h2>States of @countryName</h2>
+
+<a href="/Location/Index" class="btn btn-secondary btn-sm mb-2">← Back to Countries</a>
+
+<div id="addContainer" style="display:none;">
+    <h4>Add State</h4>
+    <form id="stateForm">
+        <input type="text" id="stateName" class="form-control mb-2" placeholder="State Name" required />
+        <button class="btn btn-primary btn-sm" type="submit">Add</button>
+    </form>
+</div>
+
+<table class="table table-striped mt-3">
+    <thead>
+        <tr>
+            <th>State</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody id="stateTable"></tbody>
+</table>
+
+@section Scripts {
+    <script>
+$(document).ready(function () {
+    const countryId = @countryId;
+    function getToken() { return localStorage.getItem('jwtToken'); }
+    function getDecoded() {
+        const token = getToken(); if (!token) return null;
+        try { return JSON.parse(atob(token.split('.')[1])); } catch { return null; }
+    }
+    function getRole() {
+        const d = getDecoded();
+        return d ? (d["role"] || d["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"]) : null;
+    }
+
+    const isAdmin = getRole() === "Admin";
+    if (isAdmin) $("#addContainer").show();
+
+    function loadStates() {
+        $.ajax({
+            url: `/api/LocationHierarchyAPI/GetStatesByCountry/${countryId}`,
+            headers: { 'Authorization': 'Bearer ' + getToken() },
+            success: data => {
+                let rows = '';
+                data.forEach(s => {
+                    rows += `<tr>
+                        <td>${s.stateName}</td>
+                        <td>
+                            <a class="btn btn-sm btn-info" href="/Location/Cities?stateId=${s.stateID}">Details</a>
+                            ${isAdmin ? `<button class="btn btn-sm btn-danger ms-1" onclick="delState(${s.stateID})">Delete</button>` : ''}
+                        </td>
+                    </tr>`;
+                });
+                $("#stateTable").html(rows);
+            }
+        });
+    }
+
+    window.delState = function(id) {
+        if (!confirm("Delete this state?")) return;
+        $.ajax({
+            url: `/api/LocationHierarchyAPI/DeleteState/${id}`,
+            type: "DELETE",
+            headers: { 'Authorization': 'Bearer ' + getToken() },
+            success: loadStates
+        });
+    }
+
+    $("#stateForm").submit(function(e){
+        e.preventDefault();
+        const name = $("#stateName").val().trim();
+        if (!name) return;
+        $.ajax({
+            url: "/api/LocationHierarchyAPI/AddState",
+            type: "POST",
+            contentType: "application/json",
+            headers: { 'Authorization': 'Bearer ' + getToken() },
+            data: JSON.stringify({ stateName: name, countryId }),
+            success: () => { $("#stateName").val(''); loadStates(); }
+        });
+    });
+
+    loadStates();
+});
+    </script>
+}

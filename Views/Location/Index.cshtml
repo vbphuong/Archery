@@ -1,0 +1,87 @@
+﻿@{
+    ViewData["Title"] = "Countries";
+}
+
+<h2>Countries</h2>
+
+<div id="addContainer" style="display:none;">
+    <h4>Add Country</h4>
+    <form id="countryForm">
+        <input type="text" id="countryName" class="form-control mb-2" placeholder="Country Name" required />
+        <button class="btn btn-primary btn-sm" type="submit">Add</button>
+    </form>
+</div>
+
+<table class="table table-striped mt-3">
+    <thead>
+        <tr>
+            <th>Country</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody id="countryTable"></tbody>
+</table>
+
+@section Scripts {
+    <script>$(document).ready(function () {
+
+            function getToken() { return localStorage.getItem('jwtToken'); }
+            function getDecoded() {
+                const token = getToken(); if (!token) return null;
+                try { return JSON.parse(atob(token.split('.')[1])); } catch { return null; }
+            }
+            function getRole() {
+                const d = getDecoded();
+                return d ? (d["role"] || d["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"]) : null;
+            }
+
+            const isAdmin = getRole() === "Admin";
+            if (isAdmin) $("#addContainer").show();
+
+            function loadCountries() {
+                $.ajax({
+                    url: "/api/LocationHierarchyAPI/GetCountries",
+                    headers: { 'Authorization': 'Bearer ' + getToken() },
+                    success: data => {
+                        let rows = '';
+                        data.forEach(c => {
+                            rows += `<tr>
+                            <td>${c.countryName}</td>
+                            <td>
+                                <a class="btn btn-sm btn-info" href="/Location/States?countryId=${c.countryID}">Details</a>
+                                ${isAdmin ? `<button class="btn btn-sm btn-danger ms-1" onclick="delCountry(${c.countryID})">Delete</button>` : ''}
+                            </td>
+                        </tr>`;
+                        });
+                        $("#countryTable").html(rows);
+                    }
+                });
+            }
+
+            window.delCountry = function (id) {
+                if (!confirm("Delete this country?")) return;
+                $.ajax({
+                    url: `/api/LocationHierarchyAPI/DeleteCountry/${id}`,
+                    type: "DELETE",
+                    headers: { 'Authorization': 'Bearer ' + getToken() },
+                    success: loadCountries
+                });
+            }
+
+            $("#countryForm").submit(function (e) {
+                e.preventDefault();
+                const name = $("#countryName").val().trim();
+                if (!name) return;
+                $.ajax({
+                    url: "/api/LocationHierarchyAPI/AddCountry",
+                    type: "POST",
+                    contentType: "application/json",
+                    headers: { 'Authorization': 'Bearer ' + getToken() },
+                    data: JSON.stringify({ countryName: name }),
+                    success: () => { $("#countryName").val(''); loadCountries(); }
+                });
+            });
+
+            loadCountries();
+        });</script>
+}

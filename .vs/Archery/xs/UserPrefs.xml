@@ -1,0 +1,40 @@
+﻿<Properties StartupConfiguration="{915EDA55-6D9E-48C0-974E-E4DD25554B08}|https">
+  <MonoDevelop.Ide.ItemProperties.Archery PreferredExecutionTarget="/System/Volumes/Preboot/Cryptexes/App/System/Applications/Safari.app" />
+  <MonoDevelop.Ide.DebuggingService.PinnedWatches />
+  <MonoDevelop.Ide.Workbench ActiveDocument="Controllers/ScoreAPIController.cs">
+    <Files>
+      <File FileName="Controllers/ArrowAPIController.cs" Line="19" Column="29" />
+      <File FileName="Controllers/ScoreAPIController.cs" Line="86" Column="14" />
+      <File FileName="Repository/ArrowRepository.cs" Line="23" Column="41" />
+      <File FileName="Repository/EndRepository.cs" Line="27" Column="1" />
+      <File FileName="Data/AppDbContext.cs" Line="22" Column="69" />
+      <File FileName="Views/CompetitionRound/Details.cshtml" Line="126" Column="49" />
+    </Files>
+    <Pads>
+      <Pad Id="ProjectPad">
+        <State name="__root__">
+          <Node name="Archery" expanded="True">
+            <Node name="Archery">
+              <Node name="Controllers">
+                <Node name="ScoreAPIController.cs" selected="True" />
+              </Node>
+              <Node name="Data" expanded="True" />
+              <Node name="Models">
+                <Node name="Entity" expanded="True" />
+              </Node>
+              <Node name="Views" expanded="True">
+                <Node name="CompetitionRound" expanded="True" />
+                <Node name="People" expanded="True" />
+              </Node>
+            </Node>
+          </Node>
+        </State>
+      </Pad>
+    </Pads>
+  </MonoDevelop.Ide.Workbench>
+  <MonoDevelop.Ide.DebuggingService.Breakpoints>
+    <BreakpointStore />
+  </MonoDevelop.Ide.DebuggingService.Breakpoints>
+  <MultiItemStartupConfigurations />
+  <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
+</Properties>

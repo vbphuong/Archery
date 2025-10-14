@@ -1,0 +1,98 @@
+﻿@{
+    ViewData["Title"] = "Cities";
+    var stateId = ViewBag.StateId;
+    var stateName = ViewBag.StateName;
+}
+
+<h2>Cities of @stateName</h2>
+
+<a href="/Location/States?countryId=@ViewBag.CountryId" class="btn btn-secondary btn-sm mb-2">← Back to States</a>
+
+<div id="addContainer" style="display:none;">
+    <h4>Add City</h4>
+    <form id="cityForm">
+        <input type="text" id="cityName" class="form-control mb-2" placeholder="City Name" required />
+        <input type="text" id="zipCode" class="form-control mb-2" placeholder="Zip Code" />
+        <button class="btn btn-primary btn-sm" type="submit">Add</button>
+    </form>
+</div>
+
+<table class="table table-striped mt-3">
+    <thead>
+        <tr>
+            <th>City</th>
+            <th>Zip Code</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody id="cityTable"></tbody>
+</table>
+
+@section Scripts {
+    <script>
+$(document).ready(function () {
+    const stateId = @stateId;
+    function getToken() { return localStorage.getItem('jwtToken'); }
+    function getDecoded() {
+        const token = getToken(); if (!token) return null;
+        try { return JSON.parse(atob(token.split('.')[1])); } catch { return null; }
+    }
+    function getRole() {
+        const d = getDecoded();
+        return d ? (d["role"] || d["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"]) : null;
+    }
+
+    const isAdmin = getRole() === "Admin";
+    if (isAdmin) $("#addContainer").show();
+
+    function loadCities() {
+        $.ajax({
+            url: `/api/LocationHierarchyAPI/GetCitiesByState/${stateId}`,
+            headers: { 'Authorization': 'Bearer ' + getToken() },
+            success: data => {
+                let rows = '';
+                data.forEach(c => {
+                    rows += `<tr>
+                        <td>${c.cityName}</td>
+                        <td>${c.zipCode || ''}</td>
+                        <td>${isAdmin ? `<button class="btn btn-sm btn-danger" onclick="delCity(${c.cityID})">Delete</button>` : ''}</td>
+                    </tr>`;
+                });
+                $("#cityTable").html(rows);
+            }
+        });
+    }
+
+    window.delCity = function(id) {
+        if (!confirm("Delete this city?")) return;
+        $.ajax({
+            url: `/api/LocationHierarchyAPI/DeleteCity/${id}`,
+            type: "DELETE",
+            headers: { 'Authorization': 'Bearer ' + getToken() },
+            success: loadCities
+        });
+    }
+
+    $("#cityForm").submit(function(e){
+        e.preventDefault();
+        const name = $("#cityName").val().trim();
+        const zip = $("#zipCode").val().trim();
+        if (!name) return;
+        $.ajax({
+            url: "/api/LocationHierarchyAPI/AddCity",
+            type: "POST",
+            contentType: "application/json",
+            headers: { 'Authorization': 'Bearer ' + getToken() },
+            data: JSON.stringify({ cityName: name, zipCode: zip, stateId }),
+            success: () => {
+                $("#cityName").val('');
+                $("#zipCode").val('');
+                loadCities();
+            }
+        });
+    });
+
+    loadCities();
+});
+    </script>
+}

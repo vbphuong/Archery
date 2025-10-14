@@ -1,0 +1,136 @@
+﻿
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Archery</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/nav.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/Archery.styles.css" asp-append-version="true" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+</head>
+<body>
+    <header>
+        <nav class="navbar navbar-expand-sm navbar-light bg-gradient-custom border-bottom box-shadow mb-3">
+            <div class="container-fluid">
+                <a class="navbar-brand animate-brand" asp-area="" asp-controller="Home" asp-action="Index">
+                    <i class="fas fa-bow-arrow"></i> Archery
+                </a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
+                        aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
+                    <ul class="navbar-nav flex-grow-1">
+                        <li class="nav-item">
+                            <a class="nav-link text-light animate-nav" asp-area="" asp-controller="Home" asp-action="Index">
+                                <i class="fas fa-home"></i> Home
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-light animate-nav" asp-area="" asp-controller="People" asp-action="Index">
+                                <i class="fas fa-users"></i> People
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-light animate-nav" asp-area="" asp-controller="Competition" asp-action="Index">
+                                <i class="fas fa-trophy"></i> Competition
+                            </a>
+                        </li>
+
+                        @*Role-based menu*@
+                        <li class="nav-item role-archer" style="display:none;">
+                            <a class="nav-link text-light animate-nav" asp-area="" asp-controller="Practice" asp-action="Index">
+                                <i class="fas fa-trophy"></i> Practice
+                            </a>
+                        </li>
+                        <li class="nav-item role-admin-recorder" style="display:none;">
+                            <a class="nav-link text-light" href="/Round/Index"><i class="fas fa-circle-notch"></i> Round</a>
+                        </li>
+                        <li class="nav-item role-admin-recorder" style="display:none;">
+                            <a class="nav-link text-light" href="/Location/Index"><i class="fas fa-map-marker-alt"></i> Location</a>
+                        </li>
+                        <li class="nav-item role-admin-recorder" style="display:none;">
+                            <a class="nav-link text-light" href="/Equipment/Index"><i class="fas fa-tools"></i> Equipment</a>
+                        </li>
+                    </ul>
+                    <ul class="navbar-nav">
+                        <li class="nav-item">
+                            <a class="nav-link text-light animate-nav" asp-area="" asp-controller="Inbox" asp-action="Index">
+                                <i class="fas fa-envelope inbox-icon"></i>
+                                @if (ViewBag.UnreadCount > 0)
+                                {
+                                    <span class="badge bg-danger">@ViewBag.UnreadCount</span>
+                                }
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <button id="logoutBtn" class="nav-link text-light signout-btn" asp-area="" asp-controller="Account" asp-action="SignOutUser">
+                                <i class="fas fa-sign-out-alt"></i> Sign Out
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
+    <div class="container">
+        <main role="main" class="pb-3">
+            @RenderBody() 
+        </main>
+    </div>
+
+    <footer class="border-top footer text-muted">
+        <div class="container">
+            &copy; 2025 - Archery - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+        </div>
+    </footer>
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="~/js/nav.js" asp-append-version="true"></script>
+    <script>
+        $(document).ready(function () {
+            function getToken() {
+                return localStorage.getItem("jwtToken");
+            }
+
+            function getRole() {
+                var token = getToken();
+                if (!token) return null;
+
+                try {
+                    var payload = JSON.parse(atob(token.split('.')[1]));
+                    return payload["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"]
+                        || payload["role"]
+                        || payload["roles"];
+                } catch {
+                    return null;
+                }
+            }
+
+            var role = getRole();
+
+            if (role === "Archer") {
+                $(".role-archer").show();
+            }
+            if (role === "Recorder" || role === "Admin") {
+                $(".role-admin-recorder").show();
+            }
+        });
+
+        $("#logoutBtn").click(function () {
+            if (confirm('Sure you want to log out?')) {
+                localStorage.removeItem("jwtToken");
+                window.location.href = "/Account/Login";
+            }
+        });
+    </script>
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

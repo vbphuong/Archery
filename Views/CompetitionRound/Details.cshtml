@@ -1,0 +1,295 @@
+﻿@model IEnumerable<Archery.Models.Entity.ArcheryRange>
+@{
+    ViewData["Title"] = "Round Details";
+
+    var competitionId = ViewBag.CompetitionId;
+    var roundId = ViewBag.RoundId;
+    var archerId = ViewBag.ArcherId;
+}
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2>Round Details</h2>
+        <a asp-controller="Competition" asp-action="Details" asp-route-id="@competitionId" class="btn btn-secondary">
+            ← Back to Competition
+        </a>
+    </div>
+
+    <!-- 🔢 Tổng điểm -->
+    <div class="d-flex justify-content-end mb-3">
+        <h5>Total Score: <span id="totalScore" class="text-primary fw-bold">0</span></h5>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="card-title">Archer's Ranges</h5>
+                <button id="btnAddRange" class="btn btn-primary btn-sm" style="display:none;">
+                    <i class="bi bi-plus-circle"></i> Add Range
+                </button>
+            </div>
+
+            <table class="table table-bordered table-striped" id="rangeTable">
+                <thead class="table-light">
+                    <tr>
+                        <th>Range ID</th>
+                        <th>Distance</th>
+                        <th>Target Face</th>
+                        <th>Num Ends</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model != null && Model.Any())
+                    {
+                        foreach (var range in Model)
+                        {
+                            <tr data-rangeid="@range.RangeID">
+                                <td>@range.RangeID</td>
+                                <td>@range.Distance</td>
+                                <td>@range.TargetFace</td>
+                                <td>@range.NumEnds</td>
+                                <td class="action-cell">
+                                    <button class="btn btn-sm btn-info view-ends-btn" data-rangeid="@range.RangeID">
+                                        <i class="bi bi-eye"></i> View Ends
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr id="ends-row-@range.RangeID" class="d-none">
+                                <td colspan="5">
+                                    <div id="ends-container-@range.RangeID" class="p-2 border rounded bg-light">
+                                        <em>Loading ends...</em>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="5" class="text-center">No ranges found for this archer.</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+const competitionId = '@competitionId';
+const roundId = '@roundId';
+const archerId = '@archerId';
+
+$(document).ready(async function () {
+    // ===== JWT TOKEN FUNCTIONS =====
+    function getToken() { return localStorage.getItem('jwtToken'); }
+
+    function getDecodedToken() {
+        const token = getToken();
+        if (!token) return null;
+        try {
+            return JSON.parse(atob(token.split('.')[1]));
+        } catch {
+            return null;
+        }
+    }
+
+    function getCurrentRole() {
+        const decoded = getDecodedToken();
+        if (!decoded) return null;
+        return decoded['http://schemas.microsoft.com/ws/2008/06/identity/claims/role']
+            || decoded['role'] || decoded['roles'] || null;
+    }
+
+    function getAuthHeaders() {
+        const token = getToken();
+        return token ? { 'Authorization': 'Bearer ' + token } : {};
+    }
+
+    const currentRole = getCurrentRole();
+    const isAdmin = currentRole === 'Admin';
+    const isRecorder = currentRole === 'Recorder';
+    const editable = isAdmin || isRecorder;
+
+    if (editable) $("#btnAddRange").show();
+
+    // ===== MAIN HANDLERS =====
+    $('.view-ends-btn').on('click', async function () {
+        const rangeId = $(this).data('rangeid');
+        const $row = $(`#ends-row-${rangeId}`);
+        const $container = $(`#ends-container-${rangeId}`);
+
+        if ($row.hasClass('d-none')) {
+            $row.removeClass('d-none');
+            await loadEnds(rangeId, $container);
+        } else {
+            $row.addClass('d-none');
+        }
+    });
+
+    if (editable) {
+        // Thêm nút Edit / Delete cho từng dòng range
+        $('#rangeTable tbody tr[data-rangeid]').each(function () {
+            const id = $(this).data('rangeid');
+            const $cell = $(this).find('.action-cell');
+
+            $cell.append(`
+                <button class="btn btn-sm btn-warning edit-range-btn" data-rangeid="${id}">
+                    <i class="bi bi-pencil-square"></i> Edit
+                </button>
+                <button class="btn btn-sm btn-danger delete-range-btn" data-rangeid="${id}">
+                    <i class="bi bi-trash"></i> Delete
+                </button>
+            `);
+        });
+
+        // Gắn event
+        $('#btnAddRange').on('click', () => openAddModal());
+        $(document).on('click', '.edit-range-btn', function () {
+            const id = $(this).data('rangeid');
+            openEditModal(id);
+        });
+        $(document).on('click', '.delete-range-btn', async function () {
+            const id = $(this).data('rangeid');
+            if (confirm('Are you sure to delete this range?')) {
+                await deleteRange(id);
+                await updateTotalScoreFromServer(); // Cập nhật tổng điểm
+            }
+        });
+    }
+
+    // ===== LOAD ENDS + ARROWS =====
+    async function loadEnds(rangeId, $container) {
+        try {
+            const res = await fetch(`/api/endapi/getbyrange/${rangeId}`, { headers: getAuthHeaders() });
+            if (!res.ok) throw new Error('Failed to load ends');
+            const ends = await res.json();
+
+            if (!ends || !ends.length) {
+                $container.html('<em>No ends found for this range.</em>');
+                return;
+            }
+
+            let html = `
+                <table class="table table-sm table-hover mb-0">
+                    <thead>
+                        <tr><th>End #</th><th>Arrows</th></tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            for (const end of ends) {
+                const arrows = await loadArrows(end.endID);
+
+                let arrowInputs = arrows.map(a => {
+                    const val = a.value ?? '';
+                    if (editable) {
+                        return `
+                            <input type="number" min="0" max="10" class="form-control form-control-sm arrow-input"
+                                data-arrowid="${a.arrowID}" value="${val}"
+                                style="width:60px; display:inline-block; margin-right:4px;">
+                        `;
+                    } else {
+                        return `<span style="margin-right:6px;">${val || '-'}</span>`;
+                    }
+                }).join('');
+
+                if (editable) {
+                    arrowInputs += `
+                        <button class="btn btn-sm btn-success save-arrows-btn" data-endid="${end.endID}">
+                            💾 Save
+                        </button>`;
+                }
+
+                html += `
+                    <tr>
+                        <td>${end.endNumber || ''}</td>
+                        <td>${arrowInputs || '-'}</td>
+                    </tr>
+                `;
+            }
+
+            html += '</tbody></table>';
+            $container.html(html);
+
+            if (editable) attachSaveHandlers($container);
+
+        } catch (err) {
+            console.error(err);
+            $container.html('<span class="text-danger">Error loading ends.</span>');
+        }
+    }
+
+    async function loadArrows(endId) {
+        try {
+            const res = await fetch(`/api/arrowapi/getbyend/${endId}`, { headers: getAuthHeaders() });
+            if (!res.ok) throw new Error('Failed to load arrows');
+            return await res.json();
+        } catch {
+            return [];
+        }
+    }
+
+    function attachSaveHandlers($container) {
+        $container.find('.save-arrows-btn').on('click', async function () {
+            const $row = $(this).closest('tr');
+            const inputs = $row.find('.arrow-input');
+
+            for (const input of inputs) {
+                const arrowId = $(input).data('arrowid');
+                const value = parseInt($(input).val()) || 0;
+
+                await fetch(`/api/arrowapi/${arrowId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...getAuthHeaders()
+                    },
+                    body: JSON.stringify({ value: value })
+                });
+            }
+
+            alert('✅ Arrows updated successfully!');
+            await updateTotalScoreFromServer(); // cập nhật lại tổng điểm
+        });
+    }
+
+    async function deleteRange(id) {
+        const res = await fetch(`/api/archeryrangeapi/${id}`, {
+            method: 'DELETE',
+            headers: getAuthHeaders()
+        });
+        if (res.ok) {
+            $(`tr[data-rangeid="${id}"]`).next().remove();
+            $(`tr[data-rangeid="${id}"]`).remove();
+        } else {
+            alert('Failed to delete range.');
+        }
+    }
+
+    // ===== LẤY TỔNG ĐIỂM TỪ SERVER =====
+    async function updateTotalScoreFromServer() {
+        try {
+            const res = await fetch(`/api/scoreapi/gettotal/${competitionId}/${roundId}/${archerId}`, {
+                headers: getAuthHeaders()
+            });
+            if (!res.ok) throw new Error('Failed to load total score');
+            const data = await res.json();
+            $('#totalScore').text(data.totalScore ?? 0);
+        } catch (err) {
+            console.error(err);
+            $('#totalScore').text('Error');
+        }
+    }
+
+    // Placeholder cho modal thêm/sửa range
+    function openAddModal() { alert('TODO: Open Add Range Modal'); }
+    function openEditModal(id) { alert('TODO: Open Edit Range Modal for ' + id); }
+
+    // 🔹 Lần đầu load trang -> cập nhật tổng điểm
+    await updateTotalScoreFromServer();
+});
+    </script>
+}

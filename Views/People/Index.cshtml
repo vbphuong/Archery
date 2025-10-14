@@ -1,0 +1,235 @@
+﻿@{
+    ViewData["Title"] = "Manage People";
+}
+
+<div class="row">
+    <div class="col-12">
+        <h2>Manage People</h2>
+        <div id="createButton" style="display:block;">
+            <button class="btn btn-success mb-3" data-bs-toggle="modal" data-bs-target="#createModal" id="createNewBtn">Create New User</button>
+        </div>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>First</th>
+                    <th>Last</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="peopleTable"></tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="createModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalTitle">Create User</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="userForm">
+                    <input type="hidden" id="userId" />
+                    <div class="mb-3">
+                        <label for="firstName">First Name</label>
+                        <input type="text" class="form-control" id="firstName" required />
+                    </div>
+                    <div class="mb-3">
+                        <label for="lastName">Last Name</label>
+                        <input type="text" class="form-control" id="lastName" required />
+                    </div>
+                    <div class="mb-3">
+                        <label for="email">Email</label>
+                        <input type="email" class="form-control" id="email" required />
+                    </div>
+
+                    <!-- Role dropdown sẽ được bật khi Edit nếu current user là Admin -->
+                    <div class="mb-3" id="roleGroup" style="display:none;">
+                        <label for="roleName">Role</label>
+                        <select class="form-select" id="roleName">
+                            <option value="Archer">Archer</option>
+                            <option value="Recorder">Recorder</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </form>
+                <div id="modalError" class="text-danger mt-2" style="display:none;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>$(document).ready(function () {
+            function getToken() { return localStorage.getItem('jwtToken'); }
+
+            function getDecodedToken() {
+                var token = getToken();
+                if (!token) return null;
+                return JSON.parse(atob(token.split('.')[1]));
+            }
+
+            function getCurrentRole() {
+                var decoded = getDecodedToken();
+                if (!decoded) return null;
+                return decoded['http://schemas.microsoft.com/ws/2008/06/identity/claims/role']
+                    || decoded['role'] || decoded['roles'] || null;
+            }
+
+            function resetForm() {
+                $("#userForm")[0].reset();
+                $("#userId").val('');
+                $("#modalTitle").text('Create User');
+                $("#modalError").hide();
+                $("#roleGroup").hide(); // mặc định ẩn role khi Create
+            }
+
+            function getCurrentEmail() {
+                var decoded = getDecodedToken();
+                if (!decoded) return null;
+                return decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress']
+                    || decoded['email'] || null;
+            }
+
+
+            function loadUsers() {
+                $.ajax({
+                    url: '/api/PeopleAPI',
+                    type: 'GET',
+                    headers: { 'Authorization': 'Bearer ' + getToken() },
+                    success: function (users) {
+                        var currentRole = getCurrentRole();
+                        var currentEmail = getCurrentEmail();
+                        var rows = '';
+
+                        users.forEach(u => {
+                            const isSelf = u.email === currentEmail;
+
+                            rows += `<tr>
+                                <td>${u.userId}</td>
+                                <td>${u.firstName}</td>
+                                <td>${u.lastName}</td>
+                                <td>${u.email}</td>
+                                <td>${u.roleName}</td>
+                                <td>
+                                    ${!isSelf ? ( 
+                                        currentRole === 'Admin'
+                                            ? `
+                                                <button class="btn btn-warning btn-sm edit-btn" data-id="${u.userId}">Edit</button>
+                                                <button class="btn btn-danger btn-sm delete-btn" data-id="${u.userId}">Delete</button>
+                                            `
+                                            : currentRole === 'Recorder' && u.roleName === 'Archer'
+                                                ? `
+                                                    <button class="btn btn-warning btn-sm edit-btn" data-id="${u.userId}">Edit</button>
+                                                    <button class="btn btn-danger btn-sm delete-btn" data-id="${u.userId}">Delete</button>
+                                                `
+                                                : ''
+                                    ) : ''}
+
+                                    ${u.roleName === 'Archer' ? `
+                                        <a href="/Archer/Details/${u.userId}" class="btn btn-info btn-sm">Details</a>
+                                    ` : ''}
+                                </td>
+                            </tr>`;
+                        });
+
+                        $("#peopleTable").html(rows);
+                        $("#createButton").css('display', currentRole === 'Admin' || currentRole === 'Recorder' ? 'block' : 'none');
+                    },
+                    error: function () {
+                        alert("Session expired. Please login again.");
+                        localStorage.removeItem('jwtToken');
+                        window.location.href = '/Account/Login';
+                    }
+                });
+            }
+
+            $("#createNewBtn").click(function () {
+                resetForm();
+                $("#createModal").modal('show');
+            });
+
+            $("#createModal").on('hidden.bs.modal', function () { resetForm(); });
+
+            $("#userForm").submit(function (e) {
+                e.preventDefault();
+                var id = $("#userId").val();
+                var url = id ? `/api/PeopleAPI/${id}` : '/api/PeopleAPI';
+                var method = id ? 'PUT' : 'POST';
+
+                var user = {
+                    userId: id ? parseInt(id) : 0,
+                    firstName: $("#firstName").val(),
+                    lastName: $("#lastName").val(),
+                    email: $("#email").val()
+                };
+
+                // Chỉ Admin mới có quyền sửa role
+                if (id && getCurrentRole() === 'Admin') {
+                    user.roleName = $("#roleName").val();
+                }
+
+                $.ajax({
+                    url: url,
+                    type: method,
+                    contentType: 'application/json',
+                    headers: { 'Authorization': 'Bearer ' + getToken() },
+                    data: JSON.stringify(user),
+                    success: function () { $("#createModal").modal('hide'); loadUsers(); },
+                    error: function (xhr) {
+                        $("#modalError").text(xhr.responseText || "Error saving user").show();
+                        if (xhr.status === 401) {
+                            localStorage.removeItem('jwtToken');
+                            window.location.href = '/Account/Login';
+                        }
+                    }
+                });
+            });
+
+            $(document).on('click', '.edit-btn', function () {
+                var id = $(this).data('id');
+                $.ajax({
+                    url: `/api/PeopleAPI/${id}`,
+                    type: 'GET',
+                    headers: { 'Authorization': 'Bearer ' + getToken() },
+                    success: function (u) {
+                        $("#userId").val(u.userId);
+                        $("#firstName").val(u.firstName);
+                        $("#lastName").val(u.lastName);
+                        $("#email").val(u.email);
+                        $("#modalTitle").text('Edit User');
+
+                        // Chỉ Admin mới có quyền sửa role
+                        if (getCurrentRole() === 'Admin') {
+                            $("#roleGroup").show();
+                            $("#roleName").val(u.roleName);
+                        } else {
+                            $("#roleGroup").hide();
+                        }
+
+                        $("#createModal").modal('show');
+                    }
+                });
+            });
+
+            $(document).on('click', '.delete-btn', function () {
+                var id = $(this).data('id');
+                if (confirm("Are you sure?")) {
+                    $.ajax({
+                        url: `/api/PeopleAPI/${id}`,
+                        type: 'DELETE',
+                        headers: { 'Authorization': 'Bearer ' + getToken() },
+                        success: function () { loadUsers(); }
+                    });
+                }
+            });
+
+            loadUsers();
+        });</script>
+}

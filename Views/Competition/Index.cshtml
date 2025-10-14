@@ -1,0 +1,221 @@
+﻿@{
+    ViewData["Title"] = "Manage Competitions";
+}
+
+<div class="row">
+    <div class="col-12">
+        <h2 class="mb-4">🏹 Manage Competitions</h2>
+
+        <!-- Tabs -->
+        <ul class="nav nav-tabs" id="competitionTabs">
+            <li class="nav-item">
+                <button class="nav-link active" id="tab-all" data-bs-toggle="tab" data-bs-target="#tabAll">All Competitions</button>
+            </li>
+        </ul>
+
+        <div class="tab-content mt-3" id="competitionTabsContent">
+            <div class="tab-pane fade show active" id="tabAll">
+                <div id="createButton" style="display:block;">
+                    <button class="btn btn-success mb-3" data-bs-toggle="modal" data-bs-target="#createModal" id="createNewBtn">
+                        + Create Competition
+                    </button>
+                </div>
+
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Date</th>
+                            <th>Championship</th>
+                            <th>Description</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="competitionTable"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="createModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalTitle">Create Competition</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="competitionForm">
+                    <input type="hidden" id="competitionId" />
+                    <div class="mb-3">
+                        <label for="name">Competition Name</label>
+                        <input type="text" class="form-control" id="name" required />
+                    </div>
+                    <div class="mb-3">
+                        <label for="date">Date</label>
+                        <input type="date" class="form-control" id="date" required />
+                    </div>
+                    <div class="mb-3">
+                        <label for="isChampionship">Is Championship</label>
+                        <select id="isChampionship" class="form-select">
+                            <option value="Yes">Yes</option>
+                            <option value="No">No</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="description">Description</label>
+                        <textarea class="form-control" id="description"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </form>
+                <div id="modalError" class="text-danger mt-2" style="display:none;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>$(document).ready(function () {
+        function getToken() { return localStorage.getItem('jwtToken'); }
+
+        function getDecodedToken() {
+            var token = getToken();
+            if (!token) return null;
+            try {
+                return JSON.parse(atob(token.split('.')[1]));
+            } catch { return null; }
+        }
+
+        function getCurrentRole() {
+            var decoded = getDecodedToken();
+            if (!decoded) return null;
+            return decoded['http://schemas.microsoft.com/ws/2008/06/identity/claims/role']
+                || decoded['role'] || decoded['roles'] || null;
+        }
+
+        function resetForm() {
+            $("#competitionForm")[0].reset();
+            $("#competitionId").val('');
+            $("#modalTitle").text('Create Competition');
+            $("#modalError").hide();
+        }
+
+        function loadCompetitions() {
+            $.ajax({
+                url: '/api/CompetitionAPI/GetAll',
+                type: 'GET',
+                headers: { 'Authorization': 'Bearer ' + getToken() },
+                success: function (data) {
+                    var currentRole = getCurrentRole();
+                    var rows = '';
+
+                    data.forEach(c => {
+                        rows += `<tr>
+                            <td>${c.competitionID}</td>
+                            <td>${c.name}</td>
+                            <td>${new Date(c.date).toLocaleDateString()}</td>
+                            <td>${c.isChampionship}</td>
+                            <td>${c.description || ''}</td>
+                            <td>
+                                <a href="/Competition/Details/${c.competitionID}" class="btn btn-info btn-sm">Details</a>
+                                ${currentRole === 'Admin' || currentRole === 'Recorder'
+                                    ? `
+                                        <button class="btn btn-warning btn-sm edit-btn" data-id="${c.competitionID}">Update</button>
+                                        ${currentRole === 'Admin'
+                                            ? `<button class="btn btn-danger btn-sm delete-btn" data-id="${c.competitionID}">Delete</button>`
+                                            : ''}
+                                    `
+                                    : ''
+                                }
+                            </td>
+                        </tr>`;
+                    });
+
+                    $("#competitionTable").html(rows);
+                    $("#createButton").css('display', currentRole === 'Admin' || currentRole === 'Recorder' ? 'block' : 'none');
+                },
+                error: function () {
+                    alert("Session expired. Please login again.");
+                    localStorage.removeItem('jwtToken');
+                    window.location.href = '/Account/Login';
+                }
+            });
+        }
+
+        $("#createNewBtn").click(function () {
+            resetForm();
+            $("#createModal").modal('show');
+        });
+
+        $("#createModal").on('hidden.bs.modal', function () { resetForm(); });
+
+        $("#competitionForm").submit(function (e) {
+            e.preventDefault();
+            var id = $("#competitionId").val();
+            var url = id ? `/api/CompetitionAPI/Update/${id}` : '/api/CompetitionAPI/Create';
+            var method = id ? 'PUT' : 'POST';
+
+            var dto = {
+                competitionID: id ? parseInt(id) : 0,
+                name: $("#name").val(),
+                date: $("#date").val(),
+                isChampionship: $("#isChampionship").val(),
+                description: $("#description").val()
+            };
+
+            $.ajax({
+                url: url,
+                type: method,
+                contentType: 'application/json',
+                headers: { 'Authorization': 'Bearer ' + getToken() },
+                data: JSON.stringify(dto),
+                success: function () {
+                    $("#createModal").modal('hide');
+                    loadCompetitions();
+                },
+                error: function (xhr) {
+                    $("#modalError").text(xhr.responseText || "Error saving competition").show();
+                    if (xhr.status === 401) {
+                        localStorage.removeItem('jwtToken');
+                        window.location.href = '/Account/Login';
+                    }
+                }
+            });
+        });
+
+        $(document).on('click', '.edit-btn', function () {
+            var id = $(this).data('id');
+            $.ajax({
+                url: `/api/CompetitionAPI/GetById/${id}`,
+                type: 'GET',
+                headers: { 'Authorization': 'Bearer ' + getToken() },
+                success: function (c) {
+                    $("#competitionId").val(c.competitionID);
+                    $("#name").val(c.name);
+                    $("#date").val(c.date.split('T')[0]);
+                    $("#isChampionship").val(c.isChampionship);
+                    $("#description").val(c.description);
+                    $("#modalTitle").text('Update Competition');
+                    $("#createModal").modal('show');
+                }
+            });
+        });
+
+        $(document).on('click', '.delete-btn', function () {
+            var id = $(this).data('id');
+            if (confirm("Are you sure you want to delete this competition?")) {
+                $.ajax({
+                    url: `/api/CompetitionAPI/Delete/${id}`,
+                    type: 'DELETE',
+                    headers: { 'Authorization': 'Bearer ' + getToken() },
+                    success: function () { loadCompetitions(); }
+                });
+            }
+        });
+
+        loadCompetitions();
+    });</script>
+}

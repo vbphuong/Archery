@@ -1,0 +1,197 @@
+﻿@{
+    ViewData["Title"] = "Rounds";
+}
+
+<h2>Rounds</h2>
+
+<div id="addEqContainer" style="display:none;">
+    <h3>Add Equivalent Round</h3>
+    <form id="eqForm">
+        <div class="form-group">
+            <label>Base Round</label>
+            <select id="baseRoundId" class="form-control" required></select>
+        </div>
+        <div class="form-group" id="equivalentRoundContainer" style="display:none;">
+            <label>Equivalent Round</label>
+            <select id="equivalentRoundId" class="form-control" required></select>
+        </div>
+        <button type="submit" class="btn btn-primary mt-2">Add Equivalent</button>
+    </form>
+</div>
+
+<table class="table table-striped mt-4">
+    <thead>
+        <tr>
+            <th>Round Name</th>
+            <th>Class</th>
+            <th>Gender</th>
+            <th>Equipment</th>
+            <th>Equivalent Round</th>
+            <th>Active</th>
+            <th>Created At</th>
+        </tr>
+    </thead>
+    <tbody id="roundTable"></tbody>
+</table>
+
+<div class="mt-3 text-center">
+    <button id="prevPage" class="btn btn-secondary btn-sm">Previous</button>
+    <span id="pageInfo" class="mx-2"></span>
+    <button id="nextPage" class="btn btn-secondary btn-sm">Next</button>
+</div>
+
+@section Scripts {
+    <script>$(document).ready(function () {
+
+            function getToken() { return localStorage.getItem('jwtToken'); }
+            function getDecoded() {
+                const token = getToken();
+                if (!token) return null;
+                try { return JSON.parse(atob(token.split('.')[1])); }
+                catch { return null; }
+            }
+            function getRole() {
+                const decoded = getDecoded();
+                return decoded ? (decoded["role"] || decoded["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"]) : null;
+            }
+
+            let allRounds = [];
+            let rounds = [];
+            let currentPage = 1;
+            const perPage = 10;
+            let totalPages = 1;
+
+            const fixedNames = ["WA90/1440", "WA70/1440", "WA60/1440", "AA50/1440", "AA40/1440"];
+
+            // === TABLE ===
+            function renderPagination() {
+                $('#pageInfo').text(`Page ${currentPage} of ${totalPages}`);
+                $('#prevPage').prop('disabled', currentPage === 1);
+                $('#nextPage').prop('disabled', currentPage === totalPages);
+            }
+
+            function renderTable() {
+                let rows = '';
+                rounds.forEach(r => {
+                    rows += `<tr>
+                    <td>${r.name}</td>
+                    <td>${r.class}</td>
+                    <td>${r.gender}</td>
+                    <td>${r.equipmentName || '—'}</td>
+                    <td>${r.equivalentRoundName || '—'}</td>
+                    <td>${r.active}</td>
+                    <td>${r.dateRecorded ? new Date(r.dateRecorded).toLocaleString() : '—'}</td>
+                </tr>`;
+                });
+                $('#roundTable').html(rows);
+                renderPagination();
+            }
+
+            function loadRounds(pageNumber = 1, pageSize = 10) {
+                $.ajax({
+                    url: `/api/RoundAPI/GetAllRounds?pageNumber=${pageNumber}&pageSize=${pageSize}`,
+                    type: 'GET',
+                    headers: { 'Authorization': 'Bearer ' + getToken() },
+                    success: function (result) {
+                        console.log("Loaded page:", pageNumber, "items:", result.data.length);
+                        rounds = result.data;
+                        const totalCount = result.totalCount;
+                        totalPages = Math.ceil(totalCount / perPage);
+                        renderTable();
+                    }
+                });
+            }
+
+            // === DROPDOWNS ===
+            function loadDropdowns() {
+                $.ajax({
+                    url: '/api/RoundAPI/GetAllRoundNames',
+                    type: 'GET',
+                    headers: { 'Authorization': 'Bearer ' + getToken() },
+                    success: function (data) {
+                        allRounds = data || [];
+                        const $base = $('#baseRoundId');
+                        $base.empty().append('<option value="">-- Select Base Round (Male) --</option>');
+
+                        allRounds.filter(r => r.gender === 'Male').forEach(r => {
+                            const text = `${r.name} - ${r.class} - ${r.gender} (${r.equipmentName || '—'})`;
+                            $base.append(`<option value="${r.roundID}">${text}</option>`);
+                        });
+
+                        // hide equivalent until base selected
+                        $('#equivalentRoundContainer').hide();
+                    }
+                });
+            }
+
+            // === Khi chọn BaseRound → show list fixed names ===
+            $('#baseRoundId').on('change', function () {
+                const baseId = parseInt($(this).val());
+                const $equi = $('#equivalentRoundId');
+                $equi.empty();
+
+                if (!baseId) {
+                    $('#equivalentRoundContainer').hide();
+                    return;
+                }
+
+                $('#equivalentRoundContainer').show();
+                $equi.append('<option value="">-- Select Equivalent Round Name --</option>');
+                fixedNames.forEach(n => {
+                    $equi.append(`<option value="${n}">${n}</option>`);
+                });
+            });
+
+            // === FORM SUBMIT ===
+            $('#eqForm').submit(function (e) {
+                e.preventDefault();
+                const baseId = parseInt($('#baseRoundId').val());
+                const equiName = $('#equivalentRoundId').val();
+                if (!baseId || !equiName) {
+                    alert("Please select both Base Round and Equivalent Name!");
+                    return;
+                }
+
+                const payload = { baseRoundId: baseId, equivalentRoundName: equiName };
+
+                $.ajax({
+                    url: '/api/RoundAPI/AddEquivalent',
+                    type: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + getToken() },
+                    contentType: 'application/json',
+                    data: JSON.stringify(payload),
+                    success: function () {
+                        alert('✅ Equivalent round added successfully!');
+                        loadRounds(currentPage, perPage);
+                        $('#eqForm')[0].reset();
+                        $('#equivalentRoundContainer').hide();
+                    },
+                    error: function (xhr) {
+                        console.error(xhr);
+                        alert('❌ Failed to add equivalent round');
+                    }
+                });
+            });
+
+            $('#prevPage').off('click').on('click', function () {
+                if (currentPage > 1) {
+                    currentPage--;
+                    loadRounds(currentPage, perPage);
+                }
+            });
+
+            $('#nextPage').off('click').on('click', function () {
+                if (currentPage < totalPages) {
+                    currentPage++;
+                    loadRounds(currentPage, perPage);
+                }
+            });
+
+
+            // === INIT ===
+            if (getRole() === 'Admin') $('#addEqContainer').show();
+            loadRounds();
+            loadDropdowns();
+
+        });</script>
+}

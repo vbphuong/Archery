@@ -1,0 +1,84 @@
+﻿@model Archery.Models.API.LoginRequestModel
+
+@{
+    Layout = ViewData["Layout"] as string;
+}
+
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Archery</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/login.css" asp-append-version="true" /> <!-- Thêm file CSS mới -->
+    <link rel="stylesheet" href="~/Archery.styles.css" asp-append-version="true" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+</head>
+
+<body>
+    <div class="login-container">
+        <div class="row justify-content-center w-100">
+            <div class="col-md-8 col-lg-6 col-xl-4">
+                <!-- tăng col để form rộng hơn -->
+                <div class="card p-5 shadow-lg text-light" style="border-radius:20px; background:rgba(0,0,0,0.5); min-width:350px;">
+                    <h2 class="login-title text-center mb-4">Login</h2>
+                    <form id="loginForm">
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email</label>
+                            <div class="input-group">
+                                <span class="input-icon"><i class="fas fa-envelope"></i></span>
+                                <input type="email" class="form-control login-input w-100" id="email" asp-for="Email" required />
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Password</label>
+                            <div class="input-group">
+                                <span class="input-icon"><i class="fas fa-lock"></i></span>
+                                <input type="password" class="form-control login-input w-100" id="password" asp-for="Password" required />
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-custom login-btn w-100">
+                            <i class="fas fa-sign-in-alt"></i> Login
+                        </button>
+                        <div id="error" class="text-danger mt-2 animate__animated" style="display:none;"></div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="background-particles"></div>
+    </div>
+
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>$(document).ready(function () {
+            $("#loginForm").submit(function (e) {
+                e.preventDefault();
+                var email = $("#email").val();
+                var password = $("#password").val();
+
+                $.ajax({
+                    url: '/api/AccountAPI/Login',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ email: email, password: password }),
+                    success: function (response) {
+                        localStorage.setItem('jwtToken', response.accessToken);
+                        window.location.href = '/Home/Index';
+                    },
+                    error: function (xhr) {
+                        $("#error").text(xhr.responseText || "Invalid username or password").fadeIn(500).addClass('animate__fadeIn');
+                        setTimeout(() => $("#error").fadeOut(500), 3000); // Ẩn sau 3 giây
+                    }
+                });
+            });
+
+            // Hiệu ứng click cho nút Login
+            $(".login-btn").on("click", function () {
+                $(this).addClass('animate__pulse');
+                setTimeout(() => $(this).removeClass('animate__pulse'), 500);
+            });
+        });</script>
+</body>
+</html>

@@ -1,0 +1,203 @@
+﻿@model Archery.Models.DTO.ArcherDTO
+@{
+    ViewData["Title"] = "Archer Profile";
+
+    // Gender options
+    var gender = Model.Gender ?? "";
+    var genderOptions = new System.Text.StringBuilder();
+    genderOptions.AppendLine("<option value=\"\">-- Select Gender --</option>");
+    genderOptions.Append($"<option value=\"Male\"{(gender == "Male" ? " selected" : "")}>Male</option>");
+    genderOptions.Append($"<option value=\"Female\"{(gender == "Female" ? " selected" : "")}>Female</option>");
+
+    // Status options
+    var status = Model.Status ?? "Active";
+    var statusOptions = new System.Text.StringBuilder();
+    statusOptions.Append($"<option value=\"Active\"{(status == "Active" ? " selected" : "")}>Active</option>");
+    statusOptions.Append($"<option value=\"Inactive\"{(status == "Inactive" ? " selected" : "")}>Inactive</option>");
+}
+
+<div class="container mt-4">
+    <h2 class="mb-3">Archer Profile</h2>
+    <div id="alertBox" class="alert alert-success d-none"></div>
+
+    <form id="archerForm">
+        <input type="hidden" id="archerId" value="@Model.ArcherId" />
+        <input type="hidden" id="userId" value="@Model.UserId" />
+
+        <div class="mb-3">
+            <label>Email</label>
+            <input type="email" id="email" class="form-control" value="@Model.Email" readonly />
+        </div>
+
+        <div class="mb-3">
+            <label>Full Name</label>
+            <input type="text" id="fullName" class="form-control" value="@Model.FullName" readonly />
+        </div>
+
+        <div class="mb-3">
+            <label>Gender</label>
+            <select id="gender" class="form-select">@Html.Raw(genderOptions.ToString())</select>
+        </div>
+
+        <div class="mb-3">
+            <label>Date of Birth</label>
+            <input type="date" id="dob" class="form-control" value="@(Model.DateOfBirth?.ToString("yyyy-MM-dd"))" />
+        </div>
+
+        <div class="mb-3">
+            <label>Status</label>
+            <select id="status" class="form-select">@Html.Raw(statusOptions.ToString())</select>
+        </div>
+
+        <div class="mb-3">
+            <label>Country</label>
+            <select id="country" class="form-select"><option value="">-- Select Country --</option></select>
+        </div>
+
+        <div class="mb-3">
+            <label>State</label>
+            <select id="state" class="form-select"><option value="">-- Select State --</option></select>
+        </div>
+
+        <div class="mb-3">
+            <label>City</label>
+            <select id="city" class="form-select"><option value="">-- Select City --</option></select>
+        </div>
+
+        <div class="mb-3">
+            <label>Address Line</label>
+            <input type="text" id="addressLine" class="form-control" value="@Model.AddressLine" />
+        </div>
+
+        <div class="mb-3">
+            <label>Equipment</label>
+            <select id="equipment" class="form-select" multiple></select>
+            <small class="form-text text-muted">
+                Hold Ctrl (Windows) or Cmd (Mac) to select multiple.
+            </small>
+        </div>
+
+        <button type="submit" class="btn btn-success" id="saveBtn">Save</button>
+        <a href="/People" class="btn btn-secondary">Back</a>
+    </form>
+</div>
+
+@section Scripts {
+    <script>$(document).ready(function () {
+            const id = $("#archerId").val();
+            const userId = $("#userId").val();
+
+            function getToken() { return localStorage.getItem('jwtToken'); }
+            function decodeToken() {
+                const t = getToken(); if (!t) return null;
+                try { return JSON.parse(atob(t.split('.')[1])); } catch { return null; }
+            }
+
+            const d = decodeToken() || {};
+            const currentRole = d["role"] || d["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"];
+            const currentUserId = parseInt(d["sub"] || d["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"]);
+
+            function setReadOnly(canEdit) {
+                $("#gender, #dob, #country, #state, #city, #addressLine").prop("disabled", !canEdit);
+                $("#status").prop("disabled", !(currentRole === "Admin" || currentRole === "Recorder"));
+                $("#saveBtn").toggle(canEdit || currentRole === "Admin" || currentRole === "Recorder");
+            }
+
+            // === LOAD COUNTRY ===
+            $.getJSON("/api/LocationHierarchyAPI/GetCountries", function (countries) {
+                countries.forEach(c => $("#country").append(`<option value="${c.countryID}">${c.countryName}</option>`));
+            });
+
+            $.getJSON("/api/EquipmentAPI/GetAll", function (equipments) {
+                $("#equipment").empty();
+                equipments.forEach(eq => {
+                    $("#equipment").append(`<option value="${eq.equipmentID}">${eq.type}</option>`);
+                });
+            });
+
+            // === WHEN COUNTRY CHANGES → LOAD STATES ===
+            $("#country").change(function () {
+                const countryId = $(this).val();
+                $("#state").empty().append('<option value="">-- Select State --</option>');
+                $("#city").empty().append('<option value="">-- Select City --</option>');
+                if (!countryId) return;
+                $.getJSON(`/api/LocationHierarchyAPI/GetStatesByCountry/by-country/${countryId}`, function (states) {
+                    states.forEach(s => $("#state").append(`<option value="${s.stateID}">${s.stateName}</option>`));
+                });
+            });
+
+            // === WHEN STATE CHANGES → LOAD CITIES ===
+            $("#state").change(function () {
+                const stateId = $(this).val();
+                $("#city").empty().append('<option value="">-- Select City --</option>');
+                if (!stateId) return;
+                $.getJSON(`/api/LocationHierarchyAPI/GetCitiesByState/by-state/${stateId}`, function (cities) {
+                    cities.forEach(c => $("#city").append(`<option value="${c.cityID}">${c.cityName}</option>`));
+                });
+            });
+
+            // === LOAD ARCHER INFO ===
+            $.ajax({
+                url: `/api/ArcherAPI/${id}`,
+                headers: { 'Authorization': 'Bearer ' + getToken() },
+                success: function (a) {
+                    $("#email").val(a.email);
+                    $("#fullName").val(a.fullName);
+                    $("#gender").val(a.gender);
+                    $("#dob").val(a.dateOfBirth ? a.dateOfBirth.split('T')[0] : '');
+                    $("#status").val(a.status || 'Active');
+                    $("#addressLine").val(a.addressLine || '');
+
+                    // Country-State-City preselect logic
+                    if (a.countryId) {
+                        $("#country").val(a.countryId).trigger("change");
+                        setTimeout(() => {
+                            if (a.stateId) $("#state").val(a.stateId).trigger("change");
+                            setTimeout(() => { if (a.cityId) $("#city").val(a.cityId); }, 400);
+                        }, 400);
+                        setTimeout(() => {
+                            // Set selected equipment
+                            if (a.equipmentIds) {
+                                $("#equipment").val(a.equipmentIds.map(String));
+                            }
+                        }, 300);
+                    }
+
+                    const canEdit = currentRole === "Admin" || currentRole === "Recorder" ||
+                        (currentRole === "Archer" && a.userId === currentUserId);
+                    setReadOnly(canEdit);
+                },
+                error: () => alert("Cannot load archer data.")
+            });
+
+            // === SAVE CHANGES ===
+            $("#archerForm").submit(function (e) {
+                e.preventDefault();
+                const dto = {
+                    archerId: parseInt(id),
+                    gender: $("#gender").val(),
+                    dateOfBirth: $("#dob").val() || null,
+                    status: $("#status").val(),
+                    countryId: parseInt($("#country").val()) || null,
+                    stateId: parseInt($("#state").val()) || null,
+                    cityId: parseInt($("#city").val()) || null,
+                    addressLine: $("#addressLine").val(),
+                    equipmentIds: $("#equipment").val().map(Number),
+                    role: currentRole
+                };
+
+                $.ajax({
+                    url: `/api/ArcherAPI/${id}`,
+                    type: "PUT",
+                    headers: { 'Authorization': 'Bearer ' + getToken() },
+                    contentType: "application/json",
+                    data: JSON.stringify(dto),
+                    success: function () {
+                        $("#alertBox").removeClass("d-none").text("Profile updated successfully!");
+                        setTimeout(() => $("#alertBox").addClass("d-none"), 3000);
+                    },
+                    error: function (xhr) { alert(xhr.responseText || "Failed to update"); }
+                });
+            });
+        });</script>
+}

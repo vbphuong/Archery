@@ -1,0 +1,173 @@
+﻿@{
+    ViewData["Title"] = "Inbox";
+    var users = ViewBag.Users as List<SelectListItem>;
+}
+
+<div class="container mt-4">
+    <h2>Inbox / Chat</h2>
+
+    <div class="row">
+        <!-- Sidebar chọn user -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">Select User</div>
+                <div class="card-body">
+                    <select id="receiverId" class="form-control mb-2">
+                        <option value="">-- Select a user --</option>
+                        @if (users != null)
+                        {
+                            foreach (var u in users)
+                            {
+                                <option value="@u.Value">@u.Text</option>
+                            }
+                        }
+                    </select>
+                    <button id="loadHistoryBtn" class="btn btn-secondary w-100">Load Chat</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chat window -->
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">Chat Window</div>
+                <div class="card-body" id="chatBox" style="height:400px; overflow-y:auto; background:#f9f9f9;">
+                    <p class="text-muted">Select a user to start chatting...</p>
+                </div>
+                <div class="card-footer">
+                    <div class="input-group">
+                        <input type="text" id="message" class="form-control" placeholder="Type a message..." />
+                        <button id="sendBtn" class="btn btn-primary">Send</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
+    <script>
+    const userMap = {
+        @if (users != null)
+        {
+            foreach (var u in users)
+            {
+                @Html.Raw($"{u.Value}: '{u.Text}',");
+            }
+        }
+    };
+    </script>
+
+    <script>const token = localStorage.getItem("jwtToken");
+        let selectedUserId = null;
+        let currentUserId = null;
+
+        // Giải JWT để lấy userId hiện tại
+        function parseJwt(token) {
+            try {
+                return JSON.parse(atob(token.split('.')[1]));
+            } catch (e) {
+                return null;
+            }
+        }
+        const payload = parseJwt(token);
+        if (payload && payload.nameid) { 
+            currentUserId = parseInt(payload.nameid);
+        }
+
+        // Kết nối SignalR
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl("/inboxHub", { accessTokenFactory: () => token })
+            .build();
+
+        connection.on("ReceiveMessage", (senderId, receiverId, message, time) => {
+            const formattedTime = new Date(time).toLocaleTimeString();
+
+            let senderName = senderId === currentUserId ? "Me" : (userMap[senderId] || `User ${senderId}`);
+            let senderClass = senderId === currentUserId ? "text-primary" : "text-success";
+
+            // Chỉ append nếu tin nhắn thuộc cuộc hội thoại đang mở
+            if (receiverId == selectedUserId || senderId == selectedUserId) {
+                $("#chatBox").append(
+                    `<div class="mb-1">
+                            <span class="fw-bold ${senderClass}">${senderName}</span>: ${message}
+                            <small class="text-muted">(${formattedTime})</small>
+                         </div>`
+                );
+                $("#chatBox").scrollTop($("#chatBox")[0].scrollHeight);
+            }
+        });
+
+        async function start() {
+            try {
+                await connection.start();
+                console.log("SignalR connected");
+            } catch (err) {
+                console.error(err);
+                setTimeout(start, 5000);
+            }
+        }
+        start();
+
+        // Load history khi chọn user
+        $("#loadHistoryBtn").click(() => {
+            selectedUserId = $("#receiverId").val();
+            if (!selectedUserId) {
+                alert("Please select a user");
+                return;
+            }
+
+            $("#chatBox").html("<p class='text-muted'>Loading chat...</p>");
+
+            $.ajax({
+                url: `/api/InboxAPI/History/${selectedUserId}`,
+                type: "GET",
+                headers: { "Authorization": "Bearer " + token },
+                success: function (messages) {
+                    $("#chatBox").html("");
+                    messages.forEach(m => {
+                        const formattedTime = new Date(m.sentAt).toLocaleTimeString();
+                        let senderName = m.sender === currentUserId ? "Me" : (userMap[m.sender] || `User ${m.sender}`);
+                        let senderClass = m.sender === currentUserId ? "text-primary" : "text-success";
+
+                        $("#chatBox").append(
+                            `<div class="mb-1">
+                                    <span class="fw-bold ${senderClass}">${senderName}</span>: ${m.message}
+                                    <small class="text-muted">(${formattedTime})</small>
+                                 </div>`
+                        );
+                    });
+                    $("#chatBox").scrollTop($("#chatBox")[0].scrollHeight);
+                },
+                error: function () {
+                    $("#chatBox").html("<p class='text-danger'>Error loading history</p>");
+                }
+            });
+        });
+
+        // Gửi tin nhắn
+        $("#sendBtn").click(() => {
+            if (!selectedUserId) {
+                alert("Please select a user first");
+                return;
+            }
+            const message = $("#message").val();
+            if (!message) return;
+
+            $.ajax({
+                url: "/api/InboxAPI/Send",
+                type: "POST",
+                contentType: "application/json",
+                headers: { "Authorization": "Bearer " + token },
+                data: JSON.stringify({ receiver: selectedUserId, message: message }),
+                success: function () {
+                    $("#message").val("");
+                },
+                error: function () {
+                    alert("Failed to send message");
+                }
+            });
+        });</script>
+
+}
