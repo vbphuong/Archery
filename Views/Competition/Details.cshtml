@@ -42,7 +42,7 @@
         <div id="archerArea" class="row g-2"></div>
     </div>
 
-    <!-- ✅ Modal Add Round -->
+    <!-- Modal Add Round -->
     <div class="modal fade" id="roundModal" tabindex="-1" aria-labelledby="roundModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -83,7 +83,7 @@
         </div>
     </div>
 
-    <!-- ✅ Modal Edit Round -->
+    <!-- Modal Edit Round -->
     <div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -144,7 +144,7 @@ $(function () {
     if (canEdit)
         $('#actionsArea').html('<button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#roundModal">➕ Add Round</button>');
 
-    // ================= LOAD ROUNDS =================
+    // LOAD ROUNDS 
     async function loadRounds() {
         const res = await fetch(`/api/CompetitionRoundAPI/GetByCompetition/${compId}`, {
             headers: { 'Authorization': 'Bearer ' + getToken() }
@@ -207,7 +207,7 @@ $(function () {
         enableDropZones();
     }
 
-    // ================= ADD ROUND =================
+    // ADD ROUND 
     async function loadRoundOptions() {
         const res = await fetch('/api/RoundAPI/GetAllRoundNames', {
             headers: { 'Authorization': 'Bearer ' + getToken() }
@@ -237,7 +237,7 @@ $(function () {
         } else alert('❌ Failed to add round.');
     });
 
-    // ================= EDIT ROUND =================
+    // EDIT ROUND 
     $('#roundTable').on('click', '.edit-btn', function () {
         const r = $(this).data();
         $('#editRoundId').val(r.roundid);
@@ -276,7 +276,7 @@ $(function () {
         loadRounds();
     });
 
-    // ================= ARCHERS + DRAG & DROP =================
+    // ARCHERS + DRAG & DROP
     async function loadArchers() {
         const res = await fetch('/api/ArcherAPI/GetAll', {
             headers: { 'Authorization': 'Bearer ' + getToken() }
@@ -343,7 +343,7 @@ $(function () {
         });
     }
 
-    // ================= INIT =================
+    // INIT
     loadRoundOptions();
     loadRounds();
     loadArchers();

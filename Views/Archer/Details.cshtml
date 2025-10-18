@@ -115,7 +115,7 @@
                 });
             });
 
-            // WHEN COUNTRY CHANGES → LOAD STATES
+            // WHEN COUNTRY CHANGES => LOAD STATES
             $("#country").change(function () {
                 const countryId = $(this).val();
                 $("#state").empty().append('<option value="">-- Select State --</option>');
@@ -126,7 +126,7 @@
                 });
             });
 
-            //WHEN STATE CHANGES → LOAD CITIES 
+            //WHEN STATE CHANGES => LOAD CITIES 
             $("#state").change(function () {
                 const stateId = $(this).val();
                 $("#city").empty().append('<option value="">-- Select City --</option>');
@@ -170,7 +170,7 @@
                 error: () => alert("Cannot load archer data.")
             });
 
-            // === SAVE CHANGES ===
+            // SAVE CHANGES
             $("#archerForm").submit(function (e) {
                 e.preventDefault();
                 const dto = {

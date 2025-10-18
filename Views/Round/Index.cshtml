@@ -63,7 +63,7 @@
 
             const fixedNames = ["WA90/1440", "WA70/1440", "WA60/1440", "AA50/1440", "AA40/1440"];
 
-            // === TABLE ===
+            // TABLE
             function renderPagination() {
                 $('#pageInfo').text(`Page ${currentPage} of ${totalPages}`);
                 $('#prevPage').prop('disabled', currentPage === 1);
@@ -102,7 +102,7 @@
                 });
             }
 
-            // === DROPDOWNS ===
+            // DROPDOWNS
             function loadDropdowns() {
                 $.ajax({
                     url: '/api/RoundAPI/GetAllRoundNames',
@@ -124,7 +124,7 @@
                 });
             }
 
-            // === Khi chọn BaseRound → show list fixed names ===
+            // Khi chọn BaseRound thì show list fixed names
             $('#baseRoundId').on('change', function () {
                 const baseId = parseInt($(this).val());
                 const $equi = $('#equivalentRoundId');
@@ -142,7 +142,7 @@
                 });
             });
 
-            // === FORM SUBMIT ===
+            // FORM SUBMIT
             $('#eqForm').submit(function (e) {
                 e.preventDefault();
                 const baseId = parseInt($('#baseRoundId').val());
@@ -187,8 +187,6 @@
                 }
             });
 
-
-            // === INIT ===
             if (getRole() === 'Admin') $('#addEqContainer').show();
             loadRounds();
             loadDropdowns();

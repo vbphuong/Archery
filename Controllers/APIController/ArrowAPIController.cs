@@ -16,7 +16,6 @@ namespace Archery.Controllers.API
             _repo = repo;
         }
 
-        // GET: api/ArrowAPI
         [HttpGet]
         public async Task<ActionResult<IEnumerable<ArrowDTO>>> GetAll()
         {
@@ -24,7 +23,6 @@ namespace Archery.Controllers.API
             return Ok(result);
         }
 
-        // GET: api/ArrowAPI/{id}
         [HttpGet("{id}")]
         public async Task<ActionResult<ArrowDTO>> GetById(int id)
         {
@@ -35,7 +33,6 @@ namespace Archery.Controllers.API
             return Ok(arrow);
         }
 
-        // GET: api/ArrowAPI/ByEnd/{endId}
         [HttpGet("getbyend/{endId}")]
         public async Task<ActionResult<IEnumerable<ArrowDTO>>> GetByEnd(int endId)
         {
@@ -43,7 +40,6 @@ namespace Archery.Controllers.API
             return Ok(arrows);
         }
 
-        // POST: api/ArrowAPI
         [HttpPost]
         public async Task<ActionResult<ArrowDTO>> Add([FromBody] ArrowDTO dto)
         {
@@ -54,7 +50,6 @@ namespace Archery.Controllers.API
             return CreatedAtAction(nameof(GetById), new { id = result!.ArrowID }, result);
         }
 
-        // PUT: api/ArrowAPI/{id}
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id, [FromBody] JsonElement body)
         {
@@ -77,7 +72,6 @@ namespace Archery.Controllers.API
             return NoContent();
         }
 
-        // DELETE: api/ArrowAPI/{id}
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {

@@ -7,7 +7,7 @@ namespace Archery.Data
     {
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
-        // ====== ENTITY SETS ======
+        // ENTITY SETS
         public DbSet<Role> Roles { get; set; }
         public DbSet<User> User { get; set; }
         public DbSet<Inbox> Inbox { get; set; }
@@ -31,7 +31,7 @@ namespace Archery.Data
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            // === KEYS ===
+            // KEYS
             modelBuilder.Entity<ArcherEquipment>()
                 .HasKey(ae => new { ae.EquipmentID, ae.ArcherID });
 
@@ -41,7 +41,7 @@ namespace Archery.Data
             modelBuilder.Entity<Score>()
                 .HasKey(s => new { s.RoundID, s.CompetitionID, s.ArcherID });
 
-            // === RELATIONSHIPS ===
+            // RELATIONSHIPS
 
             modelBuilder.Entity<State>()
                .HasOne(s => s.Country)
@@ -61,20 +61,20 @@ namespace Archery.Data
                 .HasForeignKey(a => a.CityID)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // Archer ↔ Location (via Address)
+            // Archer <=> Address 
             modelBuilder.Entity<Archer>()
                 .HasOne(a => a.Address)
                 .WithMany()
                 .HasForeignKey(a => a.AddressID)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // Archer ↔ User (1–1)
+            // Archer <=> User (1–1)
             modelBuilder.Entity<Archer>()
                 .HasOne(a => a.User)
                 .WithOne()
                 .HasForeignKey<Archer>(a => a.UserID);
 
-            // ArcherEquipment ↔ Equipment, Archer
+            // ArcherEquipment <=> Equipment, Archer
             modelBuilder.Entity<ArcherEquipment>()
                 .HasKey(ae => new { ae.ArcherID, ae.EquipmentID });
 
@@ -90,13 +90,13 @@ namespace Archery.Data
                 .HasForeignKey(ae => ae.EquipmentID)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // Round ↔ Equipment
+            // Round <=> Equipment
             modelBuilder.Entity<Round>()
                 .HasOne(r => r.Equipment)
                 .WithMany()
                 .HasForeignKey(r => r.EquipmentID);
 
-            // CompetitionRound ↔ Competition, Round
+            // CompetitionRound <=> Competition, Round
             modelBuilder.Entity<CompetitionRound>()
                 .HasOne(cr => cr.Competition)
                 .WithMany()
@@ -107,7 +107,7 @@ namespace Archery.Data
                 .WithMany()
                 .HasForeignKey(cr => cr.RoundID);
 
-            // Score ↔ CompetitionRound, Archer
+            // Score <=> CompetitionRound, Archer
             modelBuilder.Entity<Score>()
                 .HasOne(s => s.Archer)
                 .WithMany()
@@ -118,28 +118,28 @@ namespace Archery.Data
                 .WithMany()
                 .HasForeignKey(s => new { s.RoundID, s.CompetitionID });
 
-            // ArcheryRange ↔ Score
+            // ArcheryRange <=> Score
             modelBuilder.Entity<ArcheryRange>()
                 .HasOne(r => r.Score)
                 .WithMany()
                 .HasForeignKey(r => new { r.RoundID, r.CompetitionID, r.ArcherID })
                 .HasPrincipalKey(s => new { s.RoundID, s.CompetitionID, s.ArcherID });
 
-            // End ↔ ArcheryRange
+            // End <=> ArcheryRange
             modelBuilder.Entity<End>()
                 .HasOne(e => e.ArcheryRange)
                 .WithMany(r => r.Ends)
                 .HasForeignKey(e => e.RangeID)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // Arrow ↔ End
+            // Arrow <=> End
             modelBuilder.Entity<Arrow>()
                 .HasOne(a => a.End)
                 .WithMany(e => e.Arrows)
                 .HasForeignKey(a => a.EndID)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // EquivalentRound ↔ Round
+            // EquivalentRound <=> Round
             modelBuilder.Entity<EquivalentRound>()
                 .HasOne(er => er.BaseRound)
                 .WithMany()

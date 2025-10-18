@@ -52,8 +52,6 @@ namespace Archery.Controllers
         public async Task<IActionResult> EliteList()
         {
             var client = _httpClientFactory.CreateClient();
-            // nếu bạn dùng Bearer token, gán header ở đây (bằng session/localstorage từ frontend)
-            // client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
             var res = await client.GetAsync($"{_apiBaseUrl}/api/ArcherAPI/EliteArchers");
             if (!res.IsSuccessStatusCode)

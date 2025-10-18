@@ -15,7 +15,7 @@
         </a>
     </div>
 
-    <!-- 🔢 Tổng điểm -->
+    <!-- Tổng điểm -->
     <div class="d-flex justify-content-end mb-3">
         <h5>Total Score: <span id="totalScore" class="text-primary fw-bold">0</span></h5>
     </div>
@@ -76,7 +76,7 @@
     </div>
 </div>
 
-<!-- ===================== 🟢 MODALS ===================== -->
+<!-- MODALS -->
 <!-- Add Range Modal -->
 <div class="modal fade" id="addRangeModal" tabindex="-1" aria-labelledby="addRangeLabel" aria-hidden="true">
     <div class="modal-dialog">
@@ -142,8 +142,6 @@
     </div>
 </div>
 
-<!-- ===================================================== -->
-
 @section Scripts {
     <script>
 const competitionId = '@competitionId';
@@ -151,7 +149,6 @@ const roundId = '@roundId';
 const archerId = '@archerId';
 
 $(document).ready(async function () {
-    // ===== JWT HELPERS =====
     function getToken() { return localStorage.getItem('jwtToken'); }
     function getDecodedToken() {
         const token = getToken();
@@ -173,7 +170,7 @@ $(document).ready(async function () {
     const editable = ['Admin', 'Recorder'].includes(currentRole);
     if (editable) $("#btnAddRange").show();
 
-    // ===== BUTTON EVENTS =====
+    // BUTTON EVENTS
     $('.view-ends-btn').on('click', async function () {
         const rangeId = $(this).data('rangeid');
         const $row = $(`#ends-row-${rangeId}`);
@@ -229,7 +226,7 @@ $(document).ready(async function () {
         });
     }
 
-    // ===== ADD RANGE =====
+    // ADD RANGE
     $('#saveAddRangeBtn').on('click', async function () {
         const body = {
             competitionId,
@@ -250,7 +247,7 @@ $(document).ready(async function () {
         } else alert('❌ Failed to add range.');
     });
 
-    // ===== EDIT RANGE =====
+    // EDIT RANGE
     $('#saveEditRangeBtn').on('click', async function () {
         const id = $('#editRangeId').val();
         const body = {
@@ -270,7 +267,7 @@ $(document).ready(async function () {
         } else alert('❌ Failed to update range.');
     });
 
-    // ===== LOAD ENDS =====
+    // LOAD ENDS
     async function loadEnds(rangeId, $container) {
         try {
             const res = await fetch(`/api/endapi/getbyrange/${rangeId}`, { headers: getAuthHeaders() });

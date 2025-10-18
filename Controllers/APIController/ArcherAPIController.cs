@@ -78,13 +78,12 @@ namespace Archery.Controllers.Api
             return Ok(new { message = "Saved successfully" });
         }
 
-        // GET: api/ArcherAPI/EliteArchers
         [HttpGet("EliteArchers")]
         public async Task<IActionResult> GetEliteArchers()
         {
             var elites = (await _repo.GetTopEliteArchersAsync(10)).ToList();
 
-            // Attach a canonical gift list (same for all elites). You can change it or read from config.
+            // Attach a canonical gift list (same for all elites).
             var gifts = GetCanonicalGiftList();
 
             foreach (var e in elites)
@@ -101,7 +100,6 @@ namespace Archery.Controllers.Api
             return Ok(elites);
         }
 
-        // POST: api/ArcherAPI/EliteChoice
         // body: { "archerId": 12, "monthYear": "2025-10", "giftId": 2, "giftName": "Arrow Set" }
         [HttpPost("EliteChoice")]
         public IActionResult SaveEliteChoice([FromBody] EliteChoiceRequest req)

@@ -63,7 +63,6 @@
         let selectedUserId = null;
         let currentUserId = null;
 
-        // Giải JWT để lấy userId hiện tại
         function parseJwt(token) {
             try {
                 return JSON.parse(atob(token.split('.')[1]));
