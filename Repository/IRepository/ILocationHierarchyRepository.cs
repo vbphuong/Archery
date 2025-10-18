@@ -1,6 +1,6 @@
 ﻿using Archery.Models.DTO;
 
-namespace Archery.Models.Repository
+namespace Archery.Repository
 {
     public interface ILocationHierarchyRepository
     {

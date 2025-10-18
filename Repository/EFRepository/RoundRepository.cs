@@ -5,14 +5,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Archery.Repository
 {
-    public class RoundRepository : IRoundRepository
+    public class RoundRepository : BaseRepository, IRoundRepository
     {
-        private readonly AppDbContext _context;
-
-        public RoundRepository(AppDbContext context)
-        {
-            _context = context;
-        }
+        public RoundRepository(AppDbContext context) : base(context) { }
 
         public async Task<PagedResult<RoundDTO>> GetAllRoundsAsync(int pageNumber, int pageSize)
         {

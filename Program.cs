@@ -1,6 +1,5 @@
 using Archery.Data;
 using Archery.Hubs;
-using Archery.Models.Repository;
 using Archery.Repository;
 using Archery.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -73,6 +72,8 @@ builder.Services.AddScoped<ICompetitionRoundRepository, CompetitionRoundReposito
 builder.Services.AddScoped<IScoreRepository, ScoreRepository>();
 builder.Services.AddScoped<IEndRepository, EndRepository>();
 builder.Services.AddScoped<IArrowRepository, ArrowRepository>();
+builder.Services.AddSingleton<Archery.Services.EliteInMemoryService>();
+builder.Services.AddHttpClient();
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", builder => builder.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());

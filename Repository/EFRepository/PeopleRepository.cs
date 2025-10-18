@@ -5,18 +5,13 @@ using Archery.Models.Entity;
 
 namespace Archery.Repository
 {
-    public class PeopleRepository : IPeopleRepository
+    public class PeopleRepository : BaseRepository, IPeopleRepository
     {
-        private readonly AppDbContext _dbContext;
-
-        public PeopleRepository(AppDbContext dbContext)
-        {
-            _dbContext = dbContext;
-        }
+        public PeopleRepository(AppDbContext context) : base(context) { }
 
         public async Task<List<UserDTO>> GetAllAsync()
         {
-            return await _dbContext.User
+            return await _context.User
                 .Include(u => u.Role)
                 .Select(u => new UserDTO
                 {
@@ -31,7 +26,7 @@ namespace Archery.Repository
 
         public async Task<UserDTO?> GetByIdAsync(int id)
         {
-            return await _dbContext.User
+            return await _context.User
                 .Include(u => u.Role)
                 .Where(u => u.UserID == id)
                 .Select(u => new UserDTO
@@ -54,15 +49,14 @@ namespace Archery.Repository
                 throw new ArgumentException("All fields are required");
             }
 
-            var existing = await _dbContext.User.AnyAsync(u => u.Email == dto.Email);
+            var existing = await _context.User.AnyAsync(u => u.Email == dto.Email);
             if (existing) throw new ArgumentException("Email already exists");
 
             // Xác định role
-            var role = await _dbContext.Roles.FirstOrDefaultAsync(r => r.RoleName == dto.RoleName);
+            var role = await _context.Roles.FirstOrDefaultAsync(r => r.RoleName == dto.RoleName);
             if (role == null)
-                role = await _dbContext.Roles.FirstAsync(r => r.RoleID == 1); // Mặc định là Archer
+                role = await _context.Roles.FirstAsync(r => r.RoleID == 1); // Mặc định là Archer
 
-            // Tạo User mới
             var entity = new User
             {
                 FirstName = dto.FirstName,
@@ -72,8 +66,8 @@ namespace Archery.Repository
                 RoleID = role.RoleID
             };
 
-            await _dbContext.User.AddAsync(entity);
-            await _dbContext.SaveChangesAsync();
+            await _context.User.AddAsync(entity);
+            await _context.SaveChangesAsync();
 
             // Nếu là Archer thì tạo luôn record trong bảng Archer
             if (role.RoleName == "Archer")
@@ -84,8 +78,8 @@ namespace Archery.Repository
                     // Các field khác để trống, Archer sẽ tự điền sau
                 };
 
-                await _dbContext.Archers.AddAsync(archer);
-                await _dbContext.SaveChangesAsync();
+                await _context.Archers.AddAsync(archer);
+                await _context.SaveChangesAsync();
             }
 
             dto.UserId = entity.UserID;
@@ -96,7 +90,7 @@ namespace Archery.Repository
 
         public async Task<bool> UpdateAsync(int id, UserDTO dto)
         {
-            var user = await _dbContext.User.Include(u => u.Role).FirstOrDefaultAsync(u => u.UserID == id);
+            var user = await _context.User.Include(u => u.Role).FirstOrDefaultAsync(u => u.UserID == id);
             if (user == null) return false;
 
             if (user.Role != null && user.Role.RoleName == "Admin") return false;
@@ -105,25 +99,25 @@ namespace Archery.Repository
             user.LastName = dto.LastName;
             user.Email = dto.Email;
 
-            var role = await _dbContext.Roles.FirstOrDefaultAsync(r => r.RoleName == dto.RoleName);
+            var role = await _context.Roles.FirstOrDefaultAsync(r => r.RoleName == dto.RoleName);
             if (role != null && role.RoleName != "Admin")
             {
                 user.RoleID = role.RoleID;
             }
 
-            await _dbContext.SaveChangesAsync();
+            await _context.SaveChangesAsync();
             return true;
         }
 
         public async Task<bool> DeleteAsync(int id)
         {
-            var user = await _dbContext.User.Include(u => u.Role).FirstOrDefaultAsync(u => u.UserID == id);
+            var user = await _context.User.Include(u => u.Role).FirstOrDefaultAsync(u => u.UserID == id);
             if (user == null) return false;
 
             if (user.Role != null && user.Role.RoleName == "Admin") return false;
 
-            _dbContext.User.Remove(user);
-            await _dbContext.SaveChangesAsync();
+            _context.User.Remove(user);
+            await _context.SaveChangesAsync();
             return true;
         }
     }

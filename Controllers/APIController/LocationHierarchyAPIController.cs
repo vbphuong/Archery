@@ -1,5 +1,5 @@
 ﻿using Archery.Models.DTO;
-using Archery.Models.Repository;
+using Archery.Repository;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -82,7 +82,7 @@ namespace Archery.Controllers
         }
 
         //ADDRESS
-        [HttpGet("by-city/{cityId}")]
+        [HttpGet("{cityId}")]
         public async Task<IActionResult> GetAddressesByCity(int cityId)
             => Ok(await _repo.GetAddressesByCityAsync(cityId));
 

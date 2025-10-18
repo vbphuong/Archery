@@ -1,0 +1,109 @@
+﻿@{
+    ViewData["Title"] = "Elite Archers";
+}
+
+<div class="container mt-4">
+    <h2 class="mb-3">🏹 Top 10 Elite Archers</h2>
+    <div id="alertBox" class="alert alert-success d-none"></div>
+
+    <table class="table table-bordered table-striped text-center align-middle">
+        <thead class="table-dark">
+            <tr>
+                <th>Rank</th>
+                <th>Full Name</th>
+                <th>Email</th>
+                <th>Total Score</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="eliteTable"></tbody>
+    </table>
+</div>
+
+@section Scripts {
+    <script>$(document).ready(function () {
+    function getToken() { return localStorage.getItem('jwtToken'); }
+
+    function decodeToken() {
+        const t = getToken();
+        if (!t) return null;
+        try { return JSON.parse(atob(t.split('.')[1])); } catch { return null; }
+    }
+
+    const decoded = decodeToken() || {};
+    const currentRole = decoded["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"] || decoded["role"];
+    const currentUserId = parseInt(decoded["sub"] || decoded["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"]);
+
+    function loadEliteArchers() {
+        $.ajax({
+            url: '/api/ArcherAPI/EliteArchers',
+            type: 'GET',
+            headers: { 'Authorization': 'Bearer ' + getToken() },
+            success: function (data) {
+                let rows = "";
+                data.forEach(a => {
+                    const canClaimGift = (a.userId === currentUserId) || (currentRole === "Admin");
+                    rows += `
+                        <tr>
+                            <td><strong>#${a.rank}</strong></td>
+                            <td>${a.fullName}</td>
+                            <td>${a.email}</td>
+                            <td>${a.totalScore}</td>
+                            <td>
+                                ${canClaimGift ? `
+                                    <button class="btn btn-warning btn-sm claim-btn" data-id="${a.archerId}" data-name="${a.fullName}">
+                                        🎁 Claim Gift
+                                    </button>
+                                ` : `<span class="text-muted">No Access</span>`}
+                            </td>
+                        </tr>
+                    `;
+                });
+                $("#eliteTable").html(rows);
+            },
+            error: function (xhr) {
+                if (xhr.status === 401) {
+                    alert("Session expired. Please login again.");
+                    localStorage.removeItem('jwtToken');
+                    window.location.href = '/Account/Login';
+                } else {
+                    alert("Failed to load Elite Archers.");
+                }
+            }
+        });
+    }
+
+    // Event: Claim Gift
+    $(document).on('click', '.claim-btn', function () {
+        const archerId = $(this).data('id');
+        const fullName = $(this).data('name');
+        const gifts = ["Bow String", "Quiver", "Target Board", "Arrow Rest", "Arm Guard",
+                       "Glove", "Sight Lens", "Stabilizer", "Gift Voucher", "Archery Bag"];
+
+        let giftList = gifts.map((g, i) => `${i + 1}. ${g}`).join('\n');
+        let choice = prompt(`🎯 ${fullName}, choose your gift (1-10):\n\n${giftList}`);
+
+        if (!choice || isNaN(choice) || choice < 1 || choice > 10) {
+            alert("Invalid choice!");
+            return;
+        }
+
+        $.ajax({
+            url: `/api/EliteArcherAPI/ChooseGift/${archerId}`,
+            type: 'POST',
+            headers: { 'Authorization': 'Bearer ' + getToken() },
+            contentType: 'application/json',
+            data: JSON.stringify({ chosenIndex: parseInt(choice) - 1 }),
+            success: function (res) {
+                $("#alertBox").removeClass("d-none").text(`🎁 ${fullName} selected: ${res.giftName}`);
+                setTimeout(() => $("#alertBox").addClass("d-none"), 4000);
+            },
+            error: function (xhr) {
+                alert(xhr.responseText || "Failed to claim gift.");
+            }
+        });
+    });
+
+    loadEliteArchers();
+});</script>
+}

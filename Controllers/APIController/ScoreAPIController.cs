@@ -1,6 +1,6 @@
 ﻿using Archery.Data;
 using Archery.Models.DTO;
-using Archery.Models.Repository;
+using Archery.Repository;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;

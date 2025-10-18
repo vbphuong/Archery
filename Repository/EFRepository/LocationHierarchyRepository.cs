@@ -3,15 +3,11 @@ using Archery.Models.DTO;
 using Archery.Data;
 using Microsoft.EntityFrameworkCore;
 
-namespace Archery.Models.Repository
+namespace Archery.Repository
 {
-    public class LocationHierarchyRepository : ILocationHierarchyRepository
+    public class LocationHierarchyRepository : BaseRepository, ILocationHierarchyRepository
     {
-        private readonly AppDbContext _context;
-        public LocationHierarchyRepository(AppDbContext context)
-        {
-            _context = context;
-        }
+        public LocationHierarchyRepository(AppDbContext context) : base(context) { }
 
         // COUNTRY
         public async Task<IEnumerable<CountryDTO>> GetCountriesAsync()

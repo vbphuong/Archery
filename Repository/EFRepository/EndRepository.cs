@@ -4,14 +4,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Archery.Repository
 {
-    public class EndRepository : IEndRepository
+    public class EndRepository : BaseRepository, IEndRepository
     {
-        private readonly AppDbContext _context;
-
-        public EndRepository(AppDbContext context)
-        {
-            _context = context;
-        }
+        public EndRepository(AppDbContext context) : base(context) { }
 
         public async Task<IEnumerable<End>> GetByRangeAsync(int rangeId)
         {

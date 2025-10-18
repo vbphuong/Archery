@@ -3,16 +3,11 @@ using Archery.Models.DTO;
 using Archery.Models.Entity;
 using Microsoft.EntityFrameworkCore;
 
-namespace Archery.Models.Repository
+namespace Archery.Repository
 {
-    public class CompetitionRepository : ICompetitionRepository
+    public class CompetitionRepository : BaseRepository, ICompetitionRepository
     {
-        private readonly AppDbContext _context;
-
-        public CompetitionRepository(AppDbContext context)
-        {
-            _context = context;
-        }
+        public CompetitionRepository(AppDbContext context) : base(context) { }
 
         public async Task<IEnumerable<Competition>> GetAllAsync()
         {

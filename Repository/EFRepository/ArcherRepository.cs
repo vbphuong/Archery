@@ -5,18 +5,13 @@ using Archery.Models.DTO;
 
 namespace Archery.Repository
 {
-    public class ArcherRepository : IArcherRepository
+    public class ArcherRepository : BaseRepository, IArcherRepository
     {
-        private readonly AppDbContext _db;
-
-        public ArcherRepository(AppDbContext db)
-        {
-            _db = db;
-        }
+        public ArcherRepository(AppDbContext context) : base(context) { }
 
         public async Task<List<ArcherDTO>> GetAllAsync()
         {
-            return await _db.Archers
+            return await _context.Archers
                 .Include(a => a.User)
                 .Include(a => a.Address)
                     .ThenInclude(addr => addr!.City)
@@ -45,7 +40,7 @@ namespace Archery.Repository
 
         public async Task<ArcherDTO?> GetByIdAsync(int archerId)
         {
-            return await _db.Archers
+            return await _context.Archers
                 .Include(a => a.User)
                 .Include(a => a.Address)
                     .ThenInclude(addr => addr!.City)
@@ -79,7 +74,7 @@ namespace Archery.Repository
 
         public async Task<ArcherDTO?> GetByUserIdAsync(int userId)
         {
-            return await _db.Archers
+            return await _context.Archers
                 .Include(a => a.User)
                 .Include(a => a.Address)
                     .ThenInclude(addr => addr!.City)
@@ -122,21 +117,21 @@ namespace Archery.Repository
                 Status = dto.Status ?? "Active"
             };
 
-            _db.Archers.Add(entity);
-            await _db.SaveChangesAsync();
+            _context.Archers.Add(entity);
+            await _context.SaveChangesAsync();
 
             // Gắn Equipment
             if (dto.EquipmentIds?.Any() == true)
             {
                 foreach (var eqId in dto.EquipmentIds)
                 {
-                    _db.ArcherEquipments.Add(new ArcherEquipment
+                    _context.ArcherEquipments.Add(new ArcherEquipment
                     {
                         ArcherID = entity.ArcherID,
                         EquipmentID = eqId
                     });
                 }
-                await _db.SaveChangesAsync();
+                await _context.SaveChangesAsync();
             }
 
             dto.ArcherId = entity.ArcherID;
@@ -145,7 +140,7 @@ namespace Archery.Repository
 
         public async Task<bool> UpdateAsync(int archerId, ArcherDTO dto)
         {
-            var entity = await _db.Archers
+            var entity = await _context.Archers
                 .Include(a => a.ArcherEquipments)
                 .Include(a => a.Address)
                 .FirstOrDefaultAsync(a => a.ArcherID == archerId);
@@ -163,8 +158,8 @@ namespace Archery.Repository
                     CityID = dto.CityId.Value,
                     AddressLine = dto.AddressLine
                 };
-                _db.Addresses.Add(newAddress);
-                await _db.SaveChangesAsync();
+                _context.Addresses.Add(newAddress);
+                await _context.SaveChangesAsync();
                 entity.AddressID = newAddress.AddressID;
             }
 
@@ -172,13 +167,13 @@ namespace Archery.Repository
             if (dto.EquipmentIds != null)
             {
                 // Xóa tất cả equipment cũ
-                var oldEquip = _db.ArcherEquipments.Where(ae => ae.ArcherID == entity.ArcherID);
-                _db.ArcherEquipments.RemoveRange(oldEquip);
+                var oldEquip = _context.ArcherEquipments.Where(ae => ae.ArcherID == entity.ArcherID);
+                _context.ArcherEquipments.RemoveRange(oldEquip);
 
                 // Thêm lại equipment mới
                 foreach (var eqId in dto.EquipmentIds)
                 {
-                    _db.ArcherEquipments.Add(new ArcherEquipment
+                    _context.ArcherEquipments.Add(new ArcherEquipment
                     {
                         ArcherID = entity.ArcherID,
                         EquipmentID = eqId
@@ -192,21 +187,67 @@ namespace Archery.Repository
             else if (string.IsNullOrEmpty(entity.Status))
                 entity.Status = "Active";
 
-            await _db.SaveChangesAsync();
+            await _context.SaveChangesAsync();
             return true;
         }
 
         public async Task<bool> DeleteAsync(int archerId)
         {
-            var entity = await _db.Archers.FindAsync(archerId);
+            var entity = await _context.Archers.FindAsync(archerId);
             if (entity == null) return false;
 
-            var eq = _db.ArcherEquipments.Where(ae => ae.ArcherID == archerId);
-            _db.ArcherEquipments.RemoveRange(eq);
+            var eq = _context.ArcherEquipments.Where(ae => ae.ArcherID == archerId);
+            _context.ArcherEquipments.RemoveRange(eq);
 
-            _db.Archers.Remove(entity);
-            await _db.SaveChangesAsync();
+            _context.Archers.Remove(entity);
+            await _context.SaveChangesAsync();
             return true;
+        }
+
+        // Top Elite
+        public async Task<IEnumerable<EliteArcherDTO>> GetTopEliteArchersAsync(int topCount)
+        {
+            // Get total score 
+            var totals = await _context.Scores
+                .GroupBy(s => s.ArcherID)
+                .Select(g => new
+                {
+                    ArcherID = g.Key,
+                    Total = g.Sum(x => x.TotalScore)
+                })
+                .OrderByDescending(x => x.Total)
+                .Take(topCount)
+                .ToListAsync();
+
+            // join với Archers + User info
+            var archerIds = totals.Select(t => t.ArcherID).ToList();
+
+            var archers = await _context.Archers
+                .Include(a => a.User)
+                .Where(a => archerIds.Contains(a.ArcherID))
+                .ToListAsync();
+
+            // map to DTO and set Rank
+            var result = totals.Select((t, idx) =>
+            {
+                var a = archers.FirstOrDefault(x => x.ArcherID == t.ArcherID);
+                var dto = new EliteArcherDTO
+                {
+                    ArcherId = a?.ArcherID ?? t.ArcherID,
+                    UserId = a?.UserID ?? 0,
+                    FullName = a?.User != null ? (a.User.FirstName + " " + a.User.LastName).Trim() : null,
+                    Email = a?.User?.Email,
+                    Gender = a?.Gender,
+                    DateOfBirth = a?.DateOfBirth,
+                    Status = a?.Status,
+                    Rank = idx + 1,
+                    TotalScore = (int)t.Total,
+                    MonthYear = System.DateTime.Now.ToString("yyyy-MM"),
+                };
+                return dto;
+            }).ToList();
+
+            return result;
         }
     }
 }

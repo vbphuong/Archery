@@ -57,3 +57,4 @@
 /Users/abc/Documents/Swinburne/COS20007/Custom/Archery/obj/Debug/net7.0/Archery.pdb
 /Users/abc/Documents/Swinburne/COS20007/Custom/Archery/obj/Debug/net7.0/Archery.genruntimeconfig.cache
 /Users/abc/Documents/Swinburne/COS20007/Custom/Archery/obj/Debug/net7.0/ref/Archery.dll
+/Users/abc/Documents/Swinburne/COS20007/Custom/Archery/bin/Debug/net7.0/Newtonsoft.Json.dll

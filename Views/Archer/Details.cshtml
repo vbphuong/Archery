@@ -103,7 +103,7 @@
                 $("#saveBtn").toggle(canEdit || currentRole === "Admin" || currentRole === "Recorder");
             }
 
-            // === LOAD COUNTRY ===
+            // LOAD COUNTRY
             $.getJSON("/api/LocationHierarchyAPI/GetCountries", function (countries) {
                 countries.forEach(c => $("#country").append(`<option value="${c.countryID}">${c.countryName}</option>`));
             });
@@ -115,28 +115,28 @@
                 });
             });
 
-            // === WHEN COUNTRY CHANGES → LOAD STATES ===
+            // WHEN COUNTRY CHANGES → LOAD STATES
             $("#country").change(function () {
                 const countryId = $(this).val();
                 $("#state").empty().append('<option value="">-- Select State --</option>');
                 $("#city").empty().append('<option value="">-- Select City --</option>');
                 if (!countryId) return;
-                $.getJSON(`/api/LocationHierarchyAPI/GetStatesByCountry/by-country/${countryId}`, function (states) {
+                $.getJSON(`/api/LocationHierarchyAPI/GetStatesByCountry/${countryId}`, function (states) {
                     states.forEach(s => $("#state").append(`<option value="${s.stateID}">${s.stateName}</option>`));
                 });
             });
 
-            // === WHEN STATE CHANGES → LOAD CITIES ===
+            //WHEN STATE CHANGES → LOAD CITIES 
             $("#state").change(function () {
                 const stateId = $(this).val();
                 $("#city").empty().append('<option value="">-- Select City --</option>');
                 if (!stateId) return;
-                $.getJSON(`/api/LocationHierarchyAPI/GetCitiesByState/by-state/${stateId}`, function (cities) {
+                $.getJSON(`/api/LocationHierarchyAPI/GetCitiesByState/${stateId}`, function (cities) {
                     cities.forEach(c => $("#city").append(`<option value="${c.cityID}">${c.cityName}</option>`));
                 });
             });
 
-            // === LOAD ARCHER INFO ===
+            // LOAD ARCHER INFO
             $.ajax({
                 url: `/api/ArcherAPI/${id}`,
                 headers: { 'Authorization': 'Bearer ' + getToken() },

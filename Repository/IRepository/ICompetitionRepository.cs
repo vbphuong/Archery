@@ -1,7 +1,7 @@
 ﻿using Archery.Models.DTO;
 using Archery.Models.Entity;
 
-namespace Archery.Models.Repository
+namespace Archery.Repository
 {
     public interface ICompetitionRepository
     {

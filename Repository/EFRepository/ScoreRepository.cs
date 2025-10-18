@@ -4,16 +4,11 @@ using Archery.Models.Entity;
 using Archery.Models.Factory;
 using Microsoft.EntityFrameworkCore;
 
-namespace Archery.Models.Repository
+namespace Archery.Repository
 {
-    public class ScoreRepository : IScoreRepository
+    public class ScoreRepository : BaseRepository, IScoreRepository
     {
-        private readonly AppDbContext _context;
-
-        public ScoreRepository(AppDbContext context)
-        {
-            _context = context;
-        }
+        public ScoreRepository(AppDbContext context) : base(context) { }
 
         // ADD Score (Factory-based)
         public async Task<ScoreResultDTO?> AddAsync(ScoreCreateDTO dto)

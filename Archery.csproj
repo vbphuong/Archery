@@ -17,6 +17,7 @@
     <PackageReference Include="System.Security.Cryptography.Primitives" Version="4.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.Cryptography.KeyDerivation" Version="7.0.8" />
     <PackageReference Include="Microsoft.AspNetCore.SignalR.Common" Version="7.0.8" />
+    <PackageReference Include="Newtonsoft.Json" Version="7.0.1" />
   </ItemGroup>
   <ItemGroup>
     <None Remove="Repository\" />
@@ -38,6 +39,11 @@
     <None Remove="Models\Factory\" />
     <None Remove="Models\Factory\ScoreFactoryProducer.xs" />
     <None Remove="Views\CompetitionRound\" />
+    <None Remove="Repository\IRepository\" />
+    <None Remove="Repository\EFRepository\" />
+    <None Remove="Controllers\ViewController\" />
+    <None Remove="Controllers\APIController\" />
+    <None Remove="Repository\IMRepository\" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Repository\" />
@@ -60,6 +66,11 @@
     <Folder Include="Views\Round\" />
     <Folder Include="Models\Factory\" />
     <Folder Include="Views\CompetitionRound\" />
+    <Folder Include="Repository\IRepository\" />
+    <Folder Include="Repository\EFRepository\" />
+    <Folder Include="Controllers\ViewController\" />
+    <Folder Include="Controllers\APIController\" />
+    <Folder Include="Repository\IMRepository\" />
   </ItemGroup>
   <ItemGroup>
     <Content Remove="wwwroot\img\" />

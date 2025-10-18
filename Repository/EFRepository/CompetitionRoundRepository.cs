@@ -2,18 +2,13 @@
 using Archery.Models.DTO;
 using Archery.Models.Entity;
 using Microsoft.EntityFrameworkCore;
-using MySqlConnector;
+using MySqlConnector; // this library help us to write directly SQL in Repository
 
-namespace Archery.Models.Repository
+namespace Archery.Repository
 {
-    public class CompetitionRoundRepository : ICompetitionRoundRepository
+    public class CompetitionRoundRepository : BaseRepository, ICompetitionRoundRepository
     {
-        private readonly AppDbContext _context;
-
-        public CompetitionRoundRepository(AppDbContext context)
-        {
-            _context = context;
-        }
+        public CompetitionRoundRepository(AppDbContext context) : base(context) { }
 
         public async Task<IEnumerable<CompetitionRoundDTO>> GetByCompetitionAsync(int competitionId)
         {

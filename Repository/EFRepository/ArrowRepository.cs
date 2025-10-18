@@ -5,14 +5,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Archery.Repository
 {
-    public class ArrowRepository : IArrowRepository
+    public class ArrowRepository : BaseRepository, IArrowRepository
     {
-        private readonly AppDbContext _context;
-
-        public ArrowRepository(AppDbContext context)
-        {
-            _context = context;
-        }
+        public ArrowRepository(AppDbContext context) : base(context) { }
 
         public async Task<IEnumerable<ArrowDTO>> GetAllAsync()
         {
